@@ -1,11 +1,10 @@
-
 name: Build Radio Ip-NeT APK
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
+    tags: ['v*']
 
 permissions:
   contents: write
@@ -15,84 +14,71 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v5
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Find and extract project
+      - name: Extract Android project
         run: |
-          ZIP_FILE=$(find . -maxdepth 2 -type f -iname "RadioIpNet*.zip" | head -n 1)
+          ZIP=$(find . -maxdepth 1 -iname 'Radio-Ip-NeT-1.1.39-corectat.zip' | head -1)
+          test -n "$ZIP" || { echo "Arhiva nu a fost gasita"; exit 1; }
+          mkdir extracted
+          unzip -q "$ZIP" -d extracted
+          PROJECT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -1)
+          test -n "$PROJECT" || { echo "Proiect Android negasit"; exit 1; }
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
 
-          if [ -z "$ZIP_FILE" ]; then
-            echo "Arhiva RadioIpNet nu a fost gasita!"
-            exit 1
-          fi
-
-          mkdir -p extracted
-          unzip -o "$ZIP_FILE" -d extracted
-
-          PROJECT_DIR=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
-
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Proiectul Android nu a fost gasit!"
-            exit 1
-          fi
-
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-
-      - name: Set application version
+      - name: Set release version
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          VERSION="1.1.${GITHUB_RUN_NUMBER}"
-          VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))
+          VERSION="${GITHUB_REF_NAME#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          CODE=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
+          sed -i -E "s/versionCode = [0-9]+/versionCode = $CODE/; s/versionName = \"[^\"]+\"/versionName = \"$VERSION\"/" "$PROJECT/app/build.gradle.kts"
 
-          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "APP_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-
-          BUILD_FILE="$PROJECT_DIR/app/build.gradle.kts"
-
-          sed -i -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]+/versionCode = $VERSION_CODE/" "$BUILD_FILE"
-          sed -i -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]+\"/versionName = \"$VERSION\"/" "$BUILD_FILE"
-
-          echo "Versiune noua: $VERSION"
+      - name: Configure signing
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || exit 1
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/radio.jks"
+          echo "RELEASE_STORE_FILE=$RUNNER_TEMP/radio.jks" >> "$GITHUB_ENV"
+          echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Build APK
         run: |
-          gradle -p "$PROJECT_DIR" assembleDebug
-
-      - name: Find and rename APK
-        run: |
-          APK=$(find "$PROJECT_DIR" -type f -path "*/outputs/apk/debug/*.apk" | head -n 1)
-
-          if [ -z "$APK" ]; then
-            echo "APK-ul nu a fost generat!"
-            exit 1
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            gradle -p "$PROJECT" clean assembleRelease
+            mkdir -p release
+            cp "$PROJECT/app/build/outputs/apk/release/app-release.apk" release/Radio-Ip-NeT.apk
+          else
+            gradle -p "$PROJECT" assembleDebug
           fi
 
-          cp "$APK" Radio-Ip-NeT.apk
-          echo "APK pregatit: Radio-Ip-NeT.apk"
-
-      - name: Upload APK artifact
+      - name: Upload debug APK
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         uses: actions/upload-artifact@v4
         with:
-          name: Radio-Ip-NeT-${{ env.APP_VERSION }}
-          path: Radio-Ip-NeT.apk
-          if-no-files-found: error
+          name: Radio-Ip-NeT-debug
+          path: extracted/**/app/build/outputs/apk/debug/*.apk
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ env.APP_VERSION }}
-          name: Radio Ip-NeT v${{ env.APP_VERSION }}
-          target_commitish: ${{ github.sha }}
-          generate_release_notes: true
-          files: Radio-Ip-NeT.apk
+      - name: Publish APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "Radio Ip-NeT $GITHUB_REF_NAME" --notes "Radio Ip-NeT update"
+          gh release upload "$GITHUB_REF_NAME" release/Radio-Ip-NeT.apk --clobber
