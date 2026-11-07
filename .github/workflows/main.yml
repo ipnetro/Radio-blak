@@ -1,41 +1,24 @@
-
-name: Build Radio Ip-NeT APK
-
-on:
-  workflow_dispatch:
-  push:
-    branches: [main]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
       - name: Extract project
         run: |
-          unzip RadioIpNet_Project_Download.zip -d extracted
+          echo "Arhive ZIP disponibile:"
+          find . -maxdepth 2 -type f -iname "*.zip"
 
-      - name: Build APK
-        run: |
-          gradle -p extracted/RadioBigFMAndroid assembleDebug
+          ZIP_FILE=$(find . -maxdepth 2 -type f -iname "RadioIpNet*.zip" | head -n 1)
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Radio-Ip-NeT-APK
-          path: extracted/RadioBigFMAndroid/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          if [ -z "$ZIP_FILE" ]; then
+            echo "EROARE: Nu gasesc arhiva RadioIpNet."
+            exit 1
+          fi
+
+          echo "Folosesc arhiva: $ZIP_FILE"
+          mkdir -p extracted
+          unzip -o "$ZIP_FILE" -d extracted
+
+          PROJECT_DIR=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "EROARE: Nu gasesc proiectul Android."
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
