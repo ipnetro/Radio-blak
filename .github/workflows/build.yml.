@@ -1,49 +1,73 @@
 name: Build Radio Big FM Alban APK
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Compile Android APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Download repository
         uses: actions/checkout@v4
 
-      - name: Find and extract Android project
+      - name: Find Android ZIP
+        id: findzip
         run: |
-          ZIP=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          ZIP=$(find . -maxdepth 2 -type f -name "*.zip" | head -n 1)
+
           if [ -z "$ZIP" ]; then
-            echo "Nu gasesc arhiva ZIP!"
+            echo "ERROR: Android ZIP not found"
             exit 1
           fi
-          mkdir /tmp/radio
-          unzip -q "$ZIP" -d /tmp/radio
+
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Android project
+        run: |
+          mkdir -p /tmp/radio
+          unzip -q "${{ steps.findzip.outputs.zip }}" -d /tmp/radio
+
           PROJECT=$(find /tmp/radio -name settings.gradle.kts -printf '%h\n' | head -n 1)
+
           if [ -z "$PROJECT" ]; then
-            echo "Proiectul Android nu a fost gasit!"
+            echo "ERROR: Android project not found"
             exit 1
           fi
+
           cp -a "$PROJECT"/. .
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Gradle
-        run: |
-          curl -L https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d /tmp
-          echo "/tmp/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
       - name: Build APK
-        run: gradle assembleDebug
+        run: gradle --no-daemon assembleDebug
+
+      - name: Verify APK
+        run: |
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          ls -lh "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Radio-Big-FM-Alban-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
