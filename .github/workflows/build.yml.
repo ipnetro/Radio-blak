@@ -1,0 +1,49 @@
+name: Build Radio Big FM Alban APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract Android project
+        run: |
+          ZIP=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "Nu gasesc arhiva ZIP!"
+            exit 1
+          fi
+          mkdir /tmp/radio
+          unzip -q "$ZIP" -d /tmp/radio
+          PROJECT=$(find /tmp/radio -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          if [ -z "$PROJECT" ]; then
+            echo "Proiectul Android nu a fost gasit!"
+            exit 1
+          fi
+          cp -a "$PROJECT"/. .
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Gradle
+        run: |
+          curl -L https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          echo "/tmp/gradle-8.9/bin" >> "$GITHUB_PATH"
+
+      - name: Build APK
+        run: gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Radio-Big-FM-Alban-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
