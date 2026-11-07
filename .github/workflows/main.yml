@@ -1,13 +1,9 @@
-name: Build Radio Big FM Alban APK
+name: Build Radio Ip-NeT APK
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
-
-permissions:
-  contents: read
+  push:
+    branches: [main]
 
 jobs:
   build:
@@ -17,45 +13,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract Android project
-        run: |
-          ZIP=$(find . -maxdepth 2 -type f -name "*.zip" | head -n 1)
-          if [ -z "$ZIP" ]; then
-            echo "Android ZIP not found"
-            exit 1
-          fi
-
-          mkdir -p /tmp/radio
-          unzip -q "$ZIP" -d /tmp/radio
-
-          PROJECT=$(find /tmp/radio -name settings.gradle.kts -printf '%h\n' | head -n 1)
-          if [ -z "$PROJECT" ]; then
-            echo "Android project not found"
-            exit 1
-          fi
-
-          cp -a "$PROJECT"/. .
-
-      - name: Set up Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+
+      - name: Extract new project
+        run: |
+          mkdir extracted
+          unzip Radio_Ip-NeT_NOTIFICARE_PLAYER_PERSONALIZATA.zip -d extracted
+          PROJECT_DIR=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
       - name: Build APK
-        run: gradle --no-daemon assembleDebug
-
-      - name: Verify APK
-        run: test -s app/build/outputs/apk/debug/app-debug.apk
+        run: |
+          gradle -p "$PROJECT_DIR" assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Radio-Big-FM-Alban-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          name: Radio-Ip-NeT-APK
+          path: extracted/RadioBigFMAndroid/app/build/outputs/apk/debug/*.apk
