@@ -49,7 +49,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private data class Station(val name: String, val subtitle: String, val url: String, val apiId: String)
-private val stations = listOf(
+private val defaultStations = listOf(
     Station("Radio Angel Hip-Hop", "HIP-HOP • LIVE", "https://radio.ip-net.ro/listen/radio_angel_hip-hop/radio.mp3", "radio_angel_hip-hop"),
     Station("Radio Angel Dance", "DANCE • LIVE", "https://radio.ip-net.ro/listen/radioangeldance/radio.mp3", "radioangeldance"),
     Station("Radio Angel Pop", "POP • LIVE", "https://radio.ip-net.ro/listen/radio_angel__pop/radio.mp3", "radio_angel__pop"),
@@ -177,6 +177,7 @@ private fun RadioScreen(controller: MediaController?) {
     var playing by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Pregătit pentru redare") }
+    var stations by remember { mutableStateOf(defaultStations) }
     val appContext = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { appContext.getSharedPreferences("radio_ipnet_features", Context.MODE_PRIVATE) }
     var favoriteNames by remember { mutableStateOf(prefs.getStringSet("favorites", emptySet())?.toSet() ?: emptySet()) }
@@ -236,65 +237,41 @@ private fun RadioScreen(controller: MediaController?) {
         updateMenuLabel = "Se verifică actualizările..."
         try {
             val result = withContext(Dispatchers.IO) {
-                val apiResult = runCatching {
-                    val conn = (URL("https://api.github.com/repos/ipnetro/Radio.Red-Black/releases/latest").openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 12000
-                        readTimeout = 12000
-                        requestMethod = "GET"
-                        instanceFollowRedirects = true
-                        setRequestProperty("Accept", "application/vnd.github+json")
-                        setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-                        setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/1.1.42")
-                    }
-                    try {
-                        val code = conn.responseCode
-                        if (code !in 200..299) throw IllegalStateException("GitHub API HTTP $code")
-                        val json = JSONObject(conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
-                        val tag = json.optString("tag_name", "").removePrefix("v").trim()
-                        val assets = json.optJSONArray("assets")
-                        var apkUrl: String? = null
-                        if (assets != null) for (i in 0 until assets.length()) {
-                            val asset = assets.getJSONObject(i)
-                            if (asset.optString("name").endsWith(".apk", true)) {
-                                apkUrl = asset.optString("browser_download_url").takeIf { it.isNotBlank() }
-                                break
-                            }
-                        }
-                        if (tag.isBlank()) throw IllegalStateException("GitHub nu a returnat tag_name")
-                        Triple(tag, apkUrl ?: "https://github.com/ipnetro/Radio.Red-Black/releases/latest/download/Radio-Ip-NeT.apk", "api")
-                    } finally { conn.disconnect() }
+                val connection = (URL("https://update.ip-net.ro/version.json").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    requestMethod = "GET"
+                    instanceFollowRedirects = true
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("Cache-Control", "no-cache")
+                    setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/${BuildConfig.VERSION_NAME}")
                 }
-                apiResult.getOrElse {
-                    // Fallback: GitHub HTML latest-release redirect, independent of API rate limits.
-                    val conn = (URL("https://github.com/ipnetro/Radio.Red-Black/releases/latest").openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 12000
-                        readTimeout = 12000
-                        requestMethod = "GET"
-                        instanceFollowRedirects = true
-                        setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/1.1.42")
-                    }
-                    try {
-                        val code = conn.responseCode
-                        if (code !in 200..299) throw IllegalStateException("GitHub Release HTTP $code")
-                        val path = conn.url.path.trimEnd('/')
-                        val tag = path.substringAfterLast("/tag/", "").removePrefix("v").trim()
-                        if (tag.isBlank()) throw IllegalStateException("Nu am putut citi versiunea din pagina Release")
-                        Triple(tag, "https://github.com/ipnetro/Radio.Red-Black/releases/latest/download/Radio-Ip-NeT.apk", "fallback")
-                    } finally { conn.disconnect() }
+                try {
+                    val code = connection.responseCode
+                    if (code !in 200..299) throw IllegalStateException("Update server HTTP $code")
+                    val json = JSONObject(connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
+                    val latest = json.optString("latestVersion", "").trim()
+                    val remoteCode = json.optInt("versionCode", 0)
+                    val apk = json.optString("apkUrl", "").trim()
+                    if (latest.isBlank() || remoteCode <= 0) throw IllegalStateException("version.json invalid")
+                    Triple(latest, apk, remoteCode)
+                } finally {
+                    connection.disconnect()
                 }
             }
             val latest = result.first
             val apkUrl = result.second
-            apkDownloadUrl = apkUrl.orEmpty()
-            val newer = compareVersions(latest, installedVersion) > 0
-            updateAvailable = newer && apkUrl != null
+            val remoteVersionCode = result.third
+            apkDownloadUrl = apkUrl
+            val newer = remoteVersionCode > BuildConfig.VERSION_CODE
+            updateAvailable = newer && apkUrl.endsWith(".apk", ignoreCase = true)
             when {
                 latest.isBlank() -> updateMenuLabel = "Nu s-a găsit o versiune publicată"
-                newer && apkUrl != null -> {
+                newer && apkUrl.endsWith(".apk", ignoreCase = true) -> {
                     updateMenuLabel = "Versiunea $latest — se descarcă actualizarea..."
                     (appContext as? MainActivity)?.downloadAndInstallApk(apkUrl)
                 }
-                newer -> updateMenuLabel = "Versiunea $latest există, dar APK-ul lipsește din Release"
+                newer -> updateMenuLabel = "Versiunea $latest există, dar linkul APK lipsește sau este invalid"
                 showUpToDate -> updateMenuLabel = "Aplicația este la zi — nu trebuie actualizată"
             }
         } catch (e: Exception) {
@@ -325,7 +302,42 @@ private fun RadioScreen(controller: MediaController?) {
 
 
     LaunchedEffect(Unit) {
-        // La fiecare pornire confirmăm și când aplicația este deja la zi.
+        // Load remotely managed station list; retain built-in stations if the server is unavailable.
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val connection = (URL("https://update.ip-net.ro/config.json").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    requestMethod = "GET"
+                    instanceFollowRedirects = true
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("Cache-Control", "no-cache")
+                    setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/${BuildConfig.VERSION_NAME}")
+                }
+                try {
+                    if (connection.responseCode !in 200..299) throw IllegalStateException("Config HTTP ${connection.responseCode}")
+                    val json = JSONObject(connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
+                    val array = json.optJSONArray("stations") ?: throw IllegalStateException("stations missing")
+                    val remoteStations = buildList {
+                        for (i in 0 until array.length()) {
+                            val item = array.optJSONObject(i) ?: continue
+                            val name = item.optString("name").trim()
+                            val subtitle = item.optString("subtitle").trim()
+                            val url = item.optString("url").trim()
+                            val apiId = item.optString("apiId").trim()
+                            if (name.isNotBlank() && url.startsWith("https://") && apiId.isNotBlank()) {
+                                add(Station(name, subtitle, url, apiId))
+                            }
+                        }
+                    }
+                    if (remoteStations.isNotEmpty()) stations = remoteStations
+                } finally {
+                    connection.disconnect()
+                }
+            }.onFailure { error ->
+                status = "Configurație locală: server indisponibil"
+            }
+        }
         checkForUpdate(showUpToDate = true)
     }
 
