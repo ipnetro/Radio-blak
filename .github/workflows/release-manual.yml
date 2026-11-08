@@ -201,6 +201,22 @@ jobs:
           ls -lh release/Radio-Ip-NeT.apk
           sha256sum release/Radio-Ip-NeT.apk
 
+      - name: Upload identical APK as Debug artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Radio-Ip-NeT-debug
+          path: release/Radio-Ip-NeT.apk
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Upload identical APK as Release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Radio-Ip-NeT-release
+          path: release/Radio-Ip-NeT.apk
+          if-no-files-found: error
+          overwrite: true
+
       - name: Upload signed Release APK to existing GitHub Release
         shell: bash
         env:
