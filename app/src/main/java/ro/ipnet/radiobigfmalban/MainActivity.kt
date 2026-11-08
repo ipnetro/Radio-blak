@@ -194,6 +194,13 @@ private fun RadioScreen(controller: MediaController?) {
     var updateMenuLabel by remember { mutableStateOf("Verifică actualizări") }
     var menuExpanded by remember { mutableStateOf(false) }
     var showVersionDialog by remember { mutableStateOf(false) }
+    var showSongRequests by remember { mutableStateOf(false) }
+    var showHipHopHistory by remember { mutableStateOf(false) }
+    var songRequests by remember { mutableStateOf<List<SongRequest>>(emptyList()) }
+    var hipHopHistory by remember { mutableStateOf<List<String>>(emptyList()) }
+    var songRequestsLoading by remember { mutableStateOf(false) }
+    var hipHopHistoryLoading by remember { mutableStateOf(false) }
+    var songRequestMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
     fun playStation(index: Int) {
@@ -289,6 +296,80 @@ private fun RadioScreen(controller: MediaController?) {
                 }.padding(vertical = 7.dp)) }
             } }, confirmButton = { TextButton(onClick = { historyNames = emptyList(); prefs.edit().remove("history").apply() }) { Text("Șterge istoricul") } }, dismissButton = { TextButton(onClick = { showHistoryDialog = false }) { Text("Închide") } })
     }
+    if (showSongRequests) {
+        AlertDialog(
+            onDismissRequest = { showSongRequests = false },
+            title = { Text("Song Request • Hip-Hop") },
+            text = {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                    Text("Alege o melodie din lista disponibilă pentru Radio Angel Hip-Hop.",
+                        color = Color(0xFFB9AAB1), fontSize = 12.sp)
+                    Spacer(Modifier.height(10.dp))
+                    if (songRequestsLoading) CircularProgressIndicator(color = Red)
+                    if (!songRequestsLoading && songRequests.isEmpty()) Text(
+                        songRequestMessage.ifBlank { "Nu sunt melodii disponibile pentru cereri momentan." },
+                        color = Color(0xFFE8DDE1), fontSize = 12.sp
+                    )
+                    songRequests.forEach { song ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            color = Color(0xFF211A22), shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(song.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    Text(song.artist, color = Color(0xFFB9AAB1), fontSize = 10.sp)
+                                }
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        songRequestMessage = submitHipHopRequest(stations.first().apiId, song.id)
+                                    }
+                                }) { Text("CERE", color = Red, fontWeight = FontWeight.Bold) }
+                            }
+                        }
+                    }
+                    if (songRequestMessage.isNotBlank() && songRequests.isNotEmpty()) {
+                        Text(songRequestMessage, color = Color(0xFFFF8299), fontSize = 11.sp)
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showSongRequests = false }) { Text("Închide") } },
+            dismissButton = { TextButton(onClick = {
+                scope.launch {
+                    songRequestsLoading = true
+                    songRequests = loadHipHopRequests(stations.first().apiId)
+                    songRequestsLoading = false
+                }
+            }) { Text("Reîncarcă") } }
+        )
+    }
+    if (showHipHopHistory) {
+        AlertDialog(
+            onDismissRequest = { showHipHopHistory = false },
+            title = { Text("Song History • Hip-Hop") },
+            text = {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                    if (hipHopHistoryLoading) CircularProgressIndicator(color = Red)
+                    if (!hipHopHistoryLoading && hipHopHistory.isEmpty()) Text(
+                        "Istoricul nu este disponibil momentan.", color = Color(0xFFB9AAB1), fontSize = 12.sp
+                    )
+                    hipHopHistory.forEachIndexed { index, item ->
+                        Text((index + 1).toString() + ".  " + item, color = Color.White, fontSize = 12.sp,
+                            modifier = Modifier.padding(vertical = 7.dp))
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showHipHopHistory = false }) { Text("Închide") } },
+            dismissButton = { TextButton(onClick = {
+                scope.launch {
+                    hipHopHistoryLoading = true
+                    hipHopHistory = loadHipHopHistory(stations.first().apiId)
+                    hipHopHistoryLoading = false
+                }
+            }) { Text("Reîncarcă") } }
+        )
+    }
+
     if (showVersionDialog) {
         AlertDialog(
             onDismissRequest = { showVersionDialog = false },
@@ -671,6 +752,40 @@ private fun RadioScreen(controller: MediaController?) {
                 }
             }
 
+            if (selected == 0) {
+                Spacer(Modifier.height(14.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            showSongRequests = true
+                            songRequestMessage = ""
+                            scope.launch {
+                                songRequestsLoading = true
+                                songRequests = loadHipHopRequests(stations.first().apiId)
+                                songRequestsLoading = false
+                                if (songRequests.isEmpty()) songRequestMessage = "Lista indisponibilă sau cererile sunt dezactivate."
+                            }
+                        },
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Red),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8299))
+                    ) { Text("♫  SONG REQUEST", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            showHipHopHistory = true
+                            scope.launch {
+                                hipHopHistoryLoading = true
+                                hipHopHistory = loadHipHopHistory(stations.first().apiId)
+                                hipHopHistoryLoading = false
+                            }
+                        },
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF794054)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE8DDE1))
+                    ) { Text("♫  SONG HISTORY", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                }
+            }
+
             if (favoriteNames.isNotEmpty()) {
                 Spacer(Modifier.height(17.dp))
                 Text("♥  FAVORITELE TALE", modifier = Modifier.fillMaxWidth(),
@@ -694,6 +809,79 @@ private fun RadioScreen(controller: MediaController?) {
             Spacer(Modifier.height(12.dp))
         }
     }
+}
+
+private data class SongRequest(val id: String, val title: String, val artist: String)
+
+private suspend fun loadHipHopRequests(stationId: String): List<SongRequest> = withContext(Dispatchers.IO) {
+    val endpoint = "https://radio.ip-net.ro/api/station/" + Uri.encode(stationId) + "/requests"
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        connectTimeout = 8000
+        readTimeout = 8000
+        requestMethod = "GET"
+        setRequestProperty("Accept", "application/json")
+    }
+    try {
+        if (connection.responseCode !in 200..299) return@withContext emptyList()
+        val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        val array = if (body.trimStart().startsWith("[")) org.json.JSONArray(body) else {
+            val root = JSONObject(body)
+            root.optJSONArray("requests") ?: root.optJSONArray("songs") ?: org.json.JSONArray()
+        }
+        buildList {
+            for (i in 0 until array.length()) {
+                val item = array.optJSONObject(i) ?: continue
+                val song = item.optJSONObject("song") ?: item
+                val id = item.optString("request_id").ifBlank { item.optString("id").ifBlank { song.optString("id") } }
+                val title = song.optString("title").trim()
+                val artist = song.optString("artist").trim()
+                if (id.isNotBlank() && title.isNotBlank()) add(SongRequest(id, title, artist))
+            }
+        }
+    } finally { connection.disconnect() }
+}
+
+private suspend fun submitHipHopRequest(stationId: String, requestId: String): String = withContext(Dispatchers.IO) {
+    val endpoint = "https://radio.ip-net.ro/api/station/" + Uri.encode(stationId) + "/request/" + Uri.encode(requestId)
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        connectTimeout = 8000
+        readTimeout = 8000
+        requestMethod = "POST"
+        doOutput = true
+        setRequestProperty("Accept", "application/json")
+    }
+    try {
+        val code = connection.responseCode
+        if (code in 200..299) "Cererea a fost trimisă către Radio Angel Hip-Hop!"
+        else "Cererea nu a fost acceptată (HTTP " + code + ")."
+    } catch (_: Exception) {
+        "Nu am putut trimite cererea. Încearcă din nou."
+    } finally { connection.disconnect() }
+}
+
+private suspend fun loadHipHopHistory(stationId: String): List<String> = withContext(Dispatchers.IO) {
+    val endpoint = "https://radio.ip-net.ro/api/nowplaying/" + Uri.encode(stationId)
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        connectTimeout = 8000
+        readTimeout = 8000
+        requestMethod = "GET"
+        setRequestProperty("Accept", "application/json")
+    }
+    try {
+        if (connection.responseCode !in 200..299) return@withContext emptyList()
+        val json = JSONObject(connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
+        val history = json.optJSONArray("song_history") ?: return@withContext emptyList()
+        buildList {
+            for (i in 0 until history.length()) {
+                val entry = history.optJSONObject(i) ?: continue
+                val song = entry.optJSONObject("song") ?: continue
+                val title = song.optString("title").trim()
+                val artist = song.optString("artist").trim()
+                val line = if (artist.isBlank()) title else artist + " — " + title
+                if (line.isNotBlank()) add(line)
+            }
+        }
+    } finally { connection.disconnect() }
 }
 
 private data class NowPlayingInfo(val title: String, val artist: String, val artworkUrl: String)
