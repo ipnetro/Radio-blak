@@ -152,37 +152,10 @@ jobs:
             GRADLE="gradle"
           fi
 
-          # Foloseste o oglinda Maven Central inaintea surselor implicite.
-          # Evita redirectarea artefactului Kotlin catre GitHub Releases,
-          # care a raspuns repetat cu HTTP 504.
-          cat > "$RUNNER_TEMP/repositories.init.gradle" <<'GRADLE_INIT'
-          settingsEvaluated { settings ->
-              settings.pluginManagement.repositories {
-                  maven {
-                      name = "GoogleMavenCentralMirror"
-                      url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
-                  }
-              }
-              settings.dependencyResolutionManagement.repositories {
-                  maven {
-                      name = "GoogleMavenCentralMirror"
-                      url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
-                  }
-              }
-          }
-          allprojects {
-              buildscript.repositories {
-                  maven {
-                      name = "GoogleMavenCentralMirror"
-                      url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
-                  }
-              }
-          }
-
-          # Incercari repetate fara --refresh-dependencies, pentru a pastra cache-ul.
+          # Retry for transient Maven Central / JetBrains gateway errors.
           for attempt in 1 2 3 4 5; do
             echo "Build Release: incercarea $attempt din 5"
-            if "$GRADLE" --no-daemon --init-script "$RUNNER_TEMP/repositories.init.gradle" clean assembleRelease; then
+            if "$GRADLE" --no-daemon clean assembleRelease; then
               exit 0
             fi
             if [ "$attempt" -lt 5 ]; then
@@ -198,25 +171,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          APK_DIR="$PROJECT/app/build/outputs/apk/release"
-
-          if [ ! -d "$APK_DIR" ]; then
-            echo "EROARE: Directorul Release nu exista."
-            exit 1
-          fi
-
+          mkdir -p release
           mapfile -t APKS < <(
-            find "$APK_DIR" -type f -name '*.apk' \
-              ! -name '*unsigned*'
+            find "$PROJECT" -type f -name '*.apk'               -path '*/build/outputs/apk/*'               ! -path '*/debug/*'               ! -name '*unsigned*'
           )
 
           if [ "${#APKS[@]}" -ne 1 ]; then
-            echo "EROARE: Trebuie sa existe exact un APK Release."
+            echo "EROARE: Trebuie sa existe exact un APK Release. Gasite: ${#APKS[@]}"
             printf '%s\n' "${APKS[@]}"
+            find "$PROJECT" -type f -name '*.apk' -print
             exit 1
           fi
 
-          mkdir -p release
           cp "${APKS[0]}" release/Radio-Ip-NeT.apk
           test -s release/Radio-Ip-NeT.apk
 
