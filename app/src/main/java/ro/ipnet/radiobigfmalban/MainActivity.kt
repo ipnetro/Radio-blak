@@ -236,38 +236,58 @@ private fun RadioScreen(controller: MediaController?) {
         updateMenuLabel = "Se verifică actualizările..."
         try {
             val result = withContext(Dispatchers.IO) {
-                val conn = (URL("https://api.github.com/repos/ipnetro/Radio.Red-Black/releases/latest").openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 10000
-                    setRequestProperty("Accept", "application/vnd.github+json")
-                    setRequestProperty("User-Agent", "Radio-Ip-NeT-Android")
-                }
-                try {
-                    val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-                    val tag = json.optString("tag_name", "").removePrefix("v")
-                    val assets = json.optJSONArray("assets")
-                    var apkUrl: String? = null
-                    if (assets != null) for (i in 0 until assets.length()) {
-                        val asset = assets.getJSONObject(i)
-                        if (asset.optString("name").endsWith(".apk", true)) {
-                            apkUrl = asset.optString("browser_download_url")
-                            break
-                        }
+                val apiResult = runCatching {
+                    val conn = (URL("https://api.github.com/repos/ipnetro/Radio.Red-Black/releases/latest").openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 12000
+                        readTimeout = 12000
+                        requestMethod = "GET"
+                        instanceFollowRedirects = true
+                        setRequestProperty("Accept", "application/vnd.github+json")
+                        setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+                        setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/1.1.42")
                     }
-                    Triple(tag, apkUrl, "")
-                } finally { conn.disconnect() }
+                    try {
+                        val code = conn.responseCode
+                        if (code !in 200..299) throw IllegalStateException("GitHub API HTTP $code")
+                        val json = JSONObject(conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
+                        val tag = json.optString("tag_name", "").removePrefix("v").trim()
+                        val assets = json.optJSONArray("assets")
+                        var apkUrl: String? = null
+                        if (assets != null) for (i in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(i)
+                            if (asset.optString("name").endsWith(".apk", true)) {
+                                apkUrl = asset.optString("browser_download_url").takeIf { it.isNotBlank() }
+                                break
+                            }
+                        }
+                        if (tag.isBlank()) throw IllegalStateException("GitHub nu a returnat tag_name")
+                        Triple(tag, apkUrl ?: "https://github.com/ipnetro/Radio.Red-Black/releases/latest/download/Radio-Ip-NeT.apk", "api")
+                    } finally { conn.disconnect() }
+                }
+                apiResult.getOrElse {
+                    // Fallback: GitHub HTML latest-release redirect, independent of API rate limits.
+                    val conn = (URL("https://github.com/ipnetro/Radio.Red-Black/releases/latest").openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 12000
+                        readTimeout = 12000
+                        requestMethod = "GET"
+                        instanceFollowRedirects = true
+                        setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/1.1.42")
+                    }
+                    try {
+                        val code = conn.responseCode
+                        if (code !in 200..299) throw IllegalStateException("GitHub Release HTTP $code")
+                        val path = conn.url.path.trimEnd('/')
+                        val tag = path.substringAfterLast("/tag/", "").removePrefix("v").trim()
+                        if (tag.isBlank()) throw IllegalStateException("Nu am putut citi versiunea din pagina Release")
+                        Triple(tag, "https://github.com/ipnetro/Radio.Red-Black/releases/latest/download/Radio-Ip-NeT.apk", "fallback")
+                    } finally { conn.disconnect() }
+                }
             }
             val latest = result.first
             val apkUrl = result.second
             apkDownloadUrl = apkUrl.orEmpty()
             val newer = compareVersions(latest, installedVersion) > 0
             updateAvailable = newer && apkUrl != null
-            updateMenuLabel = when {
-                latest.isBlank() -> "Nu s-a găsit o versiune"
-                newer && apkUrl != null -> "Actualizare disponibilă: $latest"
-                newer -> "Versiunea $latest este publicată, dar APK-ul lipsește din Release"
-                else -> "Aplicația este la zi — nu trebuie actualizată"
-            }
             when {
                 latest.isBlank() -> updateMenuLabel = "Nu s-a găsit o versiune publicată"
                 newer && apkUrl != null -> {
@@ -279,7 +299,6 @@ private fun RadioScreen(controller: MediaController?) {
             }
         } catch (e: Exception) {
             updateAvailable = false
-            updateMenuLabel = "Verificarea actualizărilor a eșuat"
             updateMenuLabel = "Nu s-a putut verifica. Încearcă din nou."
         } finally { checkingUpdate = false }
     }
