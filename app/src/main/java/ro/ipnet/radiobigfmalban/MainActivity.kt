@@ -62,15 +62,18 @@ private val Red = Color(0xFFFF1744)
 
 class MainActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
+    private var isActivityVisible by mutableStateOf(false)
 
     override fun onStart() {
         super.onStart()
+        isActivityVisible = true
         val token = SessionToken(this, ComponentName(this, RadioPlaybackService::class.java))
         val future = MediaController.Builder(this, token).buildAsync()
         future.addListener({ controller = future.get() }, MoreExecutors.directExecutor())
     }
 
     override fun onStop() {
+        isActivityVisible = false
         controller?.release()
         controller = null
         super.onStop()
@@ -166,14 +169,14 @@ class MainActivity : ComponentActivity() {
                 primary = Red, background = Bg, surface = Panel,
                 onPrimary = Color.White, onBackground = Color.White, onSurface = Color.White
             )) {
-                RadioScreen(controller)
+                RadioScreen(controller, isActivityVisible)
             }
         }
     }
 }
 
 @Composable
-private fun RadioScreen(controller: MediaController?) {
+private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean) {
     val appContext = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { appContext.getSharedPreferences("radio_ipnet_features", Context.MODE_PRIVATE) }
     var selected by remember { mutableIntStateOf(prefs.getInt("last_station_index", 1).coerceIn(0, defaultStations.lastIndex)) }
@@ -485,8 +488,9 @@ private fun RadioScreen(controller: MediaController?) {
         checkForUpdate(showUpToDate = true)
     }
 
-    LaunchedEffect(controller, selected, playing) {
-        // Poll immediately on station change, then at a short fixed interval.
+    LaunchedEffect(controller, selected, playing, isActivityVisible) {
+        if (!isActivityVisible) return@LaunchedEffect
+        // Poll while the app is visible; keep background playback free of UI metadata polling.
         // Do not wait for ExoPlayer to report isPlaying: the new station's metadata
         // can be fetched while the audio stream is still connecting.
         var lastSongKey = ""
@@ -546,7 +550,7 @@ private fun RadioScreen(controller: MediaController?) {
                     nowPlayingArtworkUrl = info.artworkUrl
                 }
             }
-            delay(1000)
+            delay(5000)
         }
     }
 
