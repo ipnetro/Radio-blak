@@ -291,7 +291,8 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
     LaunchedEffect(controller) {
         val activeController = controller ?: return@LaunchedEffect
         delay(600)
-        if (activeController.currentMediaItem == null && !activeController.isPlaying) {
+        if (prefs.contains("last_station_index") &&
+            activeController.currentMediaItem == null && !activeController.isPlaying) {
             playStation(selected)
         }
     }
