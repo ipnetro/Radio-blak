@@ -23,8 +23,8 @@ android {
         applicationId = "ro.ipnet"
         minSdk = 23
         targetSdk = 35
-        versionCode = 1001043
-        versionName = "1.1.43"
+        versionCode = 1001044
+        versionName = "1.1.44"
     }
     buildTypes {
         getByName("release") {
