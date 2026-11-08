@@ -152,7 +152,20 @@ jobs:
             GRADLE="gradle"
           fi
 
-          "$GRADLE" --no-daemon clean assembleRelease
+          # Maven Central may redirect this Kotlin artifact to GitHub Releases.
+          # Retry transient 502/503/504 gateway failures before giving up.
+          for attempt in 1 2 3; do
+            echo "Build Release: incercarea $attempt din 3"
+            if "$GRADLE" --no-daemon --refresh-dependencies clean assembleRelease; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 20))
+            fi
+          done
+
+          echo "EROARE: Build Release a esuat dupa 3 incercari."
+          exit 1
 
       - name: Collect and verify APK
         shell: bash
