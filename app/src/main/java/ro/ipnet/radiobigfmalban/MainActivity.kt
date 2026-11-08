@@ -302,23 +302,27 @@ private fun RadioScreen(controller: MediaController?) {
 
 
     LaunchedEffect(Unit) {
-        // Load remotely managed station list; retain built-in stations if the server is unavailable.
-        withContext(Dispatchers.IO) {
+        // Fetch the live station list without allowing browser/hosting cache to return an old file.
+        val configResult = withContext(Dispatchers.IO) {
             runCatching {
-                val connection = (URL("https://update.ip-net.ro/config.json").openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 8000
-                    readTimeout = 8000
+                val configUrl = "https://update.ip-net.ro/config.json?t=${System.currentTimeMillis()}"
+                val connection = (URL(configUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
                     requestMethod = "GET"
                     instanceFollowRedirects = true
                     setRequestProperty("Accept", "application/json")
-                    setRequestProperty("Cache-Control", "no-cache")
+                    setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0")
+                    setRequestProperty("Pragma", "no-cache")
                     setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/${BuildConfig.VERSION_NAME}")
                 }
                 try {
-                    if (connection.responseCode !in 200..299) throw IllegalStateException("Config HTTP ${connection.responseCode}")
-                    val json = JSONObject(connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
-                    val array = json.optJSONArray("stations") ?: throw IllegalStateException("stations missing")
-                    val remoteStations = buildList {
+                    val httpCode = connection.responseCode
+                    if (httpCode !in 200..299) throw IllegalStateException("HTTP $httpCode")
+                    val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    val json = JSONObject(body)
+                    val array = json.optJSONArray("stations") ?: throw IllegalStateException("lista stations lipsește")
+                    buildList {
                         for (i in 0 until array.length()) {
                             val item = array.optJSONObject(i) ?: continue
                             val name = item.optString("name").trim()
@@ -329,14 +333,18 @@ private fun RadioScreen(controller: MediaController?) {
                                 add(Station(name, subtitle, url, apiId))
                             }
                         }
-                    }
-                    if (remoteStations.isNotEmpty()) stations = remoteStations
+                    }.also { if (it.isEmpty()) throw IllegalStateException("lista de posturi este goală") }
                 } finally {
                     connection.disconnect()
                 }
-            }.onFailure { error ->
-                status = "Configurație locală: server indisponibil"
             }
+        }
+        configResult.onSuccess { remoteStations ->
+            // Apply Compose state on the main thread after the network request completes.
+            stations = remoteStations
+            status = "Configurație live încărcată: ${remoteStations.size} posturi"
+        }.onFailure { error ->
+            status = "Config live: ${error.message ?: "eroare de conexiune"}"
         }
         checkForUpdate(showUpToDate = true)
     }
