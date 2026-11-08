@@ -267,7 +267,7 @@ jobs:
           TAG="$GITHUB_REF_NAME"
 
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            TAG="v1.1.40"
+            TAG="v1.0.1"
           fi
 
           gh release view "$TAG" >/dev/null 2>&1 || \
