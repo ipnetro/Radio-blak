@@ -174,13 +174,14 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun RadioScreen(controller: MediaController?) {
-    var selected by remember { mutableIntStateOf(1) }
-    var playing by remember { mutableStateOf(false) }
-    var muted by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf("Pregătit pentru redare") }
-    var stations by remember { mutableStateOf(defaultStations) }
     val appContext = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { appContext.getSharedPreferences("radio_ipnet_features", Context.MODE_PRIVATE) }
+    var selected by remember { mutableIntStateOf(prefs.getInt("last_station_index", 1).coerceIn(0, defaultStations.lastIndex)) }
+    var playing by remember { mutableStateOf(false) }
+    var playerVolume by remember { mutableFloatStateOf(prefs.getFloat("player_volume", 1f).coerceIn(0f, 1f)) }
+    var muted by remember { mutableStateOf(playerVolume <= 0f) }
+    var status by remember { mutableStateOf("Pregătit pentru redare") }
+    var stations by remember { mutableStateOf(defaultStations) }
     var favoriteNames by remember { mutableStateOf(prefs.getStringSet("favorites", emptySet())?.toSet() ?: emptySet()) }
     var historyNames by remember { mutableStateOf(prefs.getString("history", "")!!.split("\n").filter { it.isNotBlank() }) }
     var showHistoryDialog by remember { mutableStateOf(false) }
@@ -224,13 +225,19 @@ private fun RadioScreen(controller: MediaController?) {
                 }
             }
             activeController.addListener(listener)
+            activeController.volume = playerVolume
             playing = activeController.isPlaying
             onDispose { activeController.removeListener(listener) }
         }
     }
 
     fun playStation(index: Int) {
-        selected = index
+        selected = index.coerceIn(0, stations.lastIndex)
+        prefs.edit()
+            .putInt("last_station_index", selected)
+            .putString("last_station_name", stations[selected].name)
+            .apply()
+        RadioWidgetProvider.refresh(appContext)
         val c = controller ?: run { status = "Playerul se conectează..."; return }
         status = "Se conectează la ${stations[index].name}..."
         // Afișăm imediat postul selectat până sosește metadatele melodiei noi.
@@ -262,6 +269,14 @@ private fun RadioScreen(controller: MediaController?) {
                 playing = false
                 status = "Eroare la conectare: ${e.message ?: "playlist invalid"}"
             }
+        }
+    }
+
+    LaunchedEffect(controller) {
+        val activeController = controller ?: return@LaunchedEffect
+        delay(600)
+        if (activeController.currentMediaItem == null && !activeController.isPlaying) {
+            playStation(selected)
         }
     }
 
@@ -449,6 +464,7 @@ private fun RadioScreen(controller: MediaController?) {
         configResult.onSuccess { remoteStations ->
             // Apply Compose state on the main thread after the network request completes.
             stations = remoteStations
+            selected = prefs.getInt("last_station_index", selected).coerceIn(0, remoteStations.lastIndex)
             status = "Configurație live încărcată: ${remoteStations.size} posturi"
         }.onFailure { error ->
             status = "Config live: ${error.message ?: "eroare de conexiune"}"
@@ -715,7 +731,12 @@ private fun RadioScreen(controller: MediaController?) {
                         }
                         Spacer(Modifier.width(24.dp))
                         Surface(
-                            onClick = { muted = !muted; controller?.volume = if (muted) 0f else 1f },
+                            onClick = {
+                                muted = !muted
+                                playerVolume = if (muted) 0f else 1f
+                                controller?.volume = playerVolume
+                                prefs.edit().putFloat("player_volume", playerVolume).apply()
+                            },
                             color = Color(0xFF29232B), shape = CircleShape,
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF49313B))
                         ) {
@@ -723,6 +744,22 @@ private fun RadioScreen(controller: MediaController?) {
                                 Text(if (muted) "×" else "♫", color = Color(0xFFE8DDE1), fontSize = 19.sp)
                             }
                         }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("VOL", color = Color(0xFFB9AAB1), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Slider(
+                            value = playerVolume,
+                            onValueChange = { value ->
+                                playerVolume = value
+                                muted = value <= 0f
+                                controller?.volume = value
+                                prefs.edit().putFloat("player_volume", value).apply()
+                            },
+                            valueRange = 0f..1f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text("${(playerVolume * 100).toInt()}%", color = Color.White, fontSize = 10.sp)
                     }
                     Spacer(Modifier.height(13.dp))
                     Text(
