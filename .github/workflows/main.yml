@@ -159,6 +159,8 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" |
             base64 --decode > "$RUNNER_TEMP/radio.jks"
 
+          test -s "$RUNNER_TEMP/radio.jks"
+
           {
             echo "RELEASE_STORE_FILE=$RUNNER_TEMP/radio.jks"
             echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD"
@@ -180,9 +182,16 @@ jobs:
             GRADLE="gradle"
           fi
 
-          if [[ "$GITHUB_REF" == refs/tags/v* ]] || [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "Build RELEASE pentru tag"
             "$GRADLE" --no-daemon clean assembleRelease
+
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "Build DEBUG si RELEASE pentru pornire manuala"
+            "$GRADLE" --no-daemon clean assembleDebug assembleRelease
+
           else
+            echo "Build DEBUG pentru main"
             "$GRADLE" --no-daemon assembleDebug
           fi
 
@@ -191,39 +200,50 @@ jobs:
         run: |
           set -euo pipefail
 
+          mkdir -p release debug
+
           if [[ "$GITHUB_REF" == refs/tags/v* ]] || [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            APK_DIR="$PROJECT/app/build/outputs/apk/release"
-          else
-            APK_DIR="$PROJECT/app/build/outputs/apk/debug"
+            RELEASE_DIR="$PROJECT/app/build/outputs/apk/release"
+
+            mapfile -t RELEASE_APKS < <(
+              find "$RELEASE_DIR" -type f -name '*.apk' \
+                ! -name '*unsigned*'
+            )
+
+            if [ "${#RELEASE_APKS[@]}" -ne 1 ]; then
+              echo "EROARE: APK Release invalid sau multiplu."
+              printf '%s\n' "${RELEASE_APKS[@]}"
+              exit 1
+            fi
+
+            cp "${RELEASE_APKS[0]}" release/Radio-Ip-NeT.apk
           fi
 
-          if [ ! -d "$APK_DIR" ]; then
-            echo "EROARE: Directorul APK nu exista: $APK_DIR"
-            exit 1
+          if [[ "$GITHUB_REF" == refs/heads/main ]] || [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            DEBUG_DIR="$PROJECT/app/build/outputs/apk/debug"
+
+            mapfile -t DEBUG_APKS < <(
+              find "$DEBUG_DIR" -type f -name '*.apk'
+            )
+
+            if [ "${#DEBUG_APKS[@]}" -ne 1 ]; then
+              echo "EROARE: APK Debug invalid sau multiplu."
+              printf '%s\n' "${DEBUG_APKS[@]}"
+              exit 1
+            fi
+
+            cp "${DEBUG_APKS[0]}" debug/Radio-Ip-NeT-debug.apk
           fi
 
-          mapfile -t APKS < <(
-            find "$APK_DIR" -type f -name '*.apk' \
-              ! -name '*unsigned*'
-          )
-
-          if [ "${#APKS[@]}" -ne 1 ]; then
-            echo "EROARE: Trebuie sa existe exact un APK."
-            printf '%s\n' "${APKS[@]}"
-            exit 1
-          fi
-
-          mkdir -p release
-          cp "${APKS[0]}" release/Radio-Ip-NeT.apk
-
-          ls -lh release/Radio-Ip-NeT.apk
+          echo "APK-uri generate:"
+          ls -lh release/ debug/
 
       - name: Upload debug APK
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: Radio-Ip-NeT-debug
-          path: release/Radio-Ip-NeT.apk
+          path: debug/Radio-Ip-NeT-debug.apk
           if-no-files-found: error
 
       - name: Upload release APK artifact
@@ -235,7 +255,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish APK to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -244,10 +264,17 @@ jobs:
 
           test -s release/Radio-Ip-NeT.apk
 
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" \
-              --title "Radio Ip-NeT $GITHUB_REF_NAME" \
+          TAG="$GITHUB_REF_NAME"
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            TAG="v1.1.40"
+          fi
+
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" \
+              --target main \
+              --title "Radio Ip-NeT $TAG" \
               --notes "Radio Ip-NeT Android Release"
 
-          gh release upload "$GITHUB_REF_NAME" \
+          gh release upload "$TAG" \
             release/Radio-Ip-NeT.apk --clobber
