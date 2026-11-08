@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="#17151C">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RADIO IP•NET"
+        android:textColor="#FFFF1744"
+        android:textStyle="bold"
+        android:textSize="12sp" />
+    <TextView
+        android:id="@+id/widget_station"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Radio Ip-NeT"
+        android:textColor="#FFFFFFFF"
+        android:textStyle="bold"
+        android:textSize="15sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:paddingTop="5dp" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="8dp">
+        <Button
+            android:id="@+id/widget_play"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="PLAY / PAUSE"
+            android:textAllCaps="false" />
+        <Button
+            android:id="@+id/widget_stop"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="STOP"
+            android:textAllCaps="false" />
+    </LinearLayout>
+</LinearLayout>
