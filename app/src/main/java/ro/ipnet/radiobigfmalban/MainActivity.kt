@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -202,6 +203,31 @@ private fun RadioScreen(controller: MediaController?) {
     var hipHopHistoryLoading by remember { mutableStateOf(false) }
     var songRequestMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+
+    // Observe MediaSession controls so the app UI follows notification/lock-screen actions.
+    DisposableEffect(controller) {
+        val activeController = controller
+        if (activeController == null) {
+            playing = false
+            onDispose { }
+        } else {
+            val listener = object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    playing = isPlaying
+                    if (isPlaying) status = "Radio redă în fundal"
+                }
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+                        playing = false
+                    }
+                }
+            }
+            activeController.addListener(listener)
+            playing = activeController.isPlaying
+            onDispose { activeController.removeListener(listener) }
+        }
+    }
 
     fun playStation(index: Int) {
         selected = index
@@ -455,6 +481,28 @@ private fun RadioScreen(controller: MediaController?) {
                     val songKey = "${info.artist}|${info.title}|${info.artworkUrl}"
                     if (songKey != lastSongKey) {
                         lastSongKey = songKey
+
+                        // Media3 uses this metadata for the system media notification
+                        // and Android lock-screen controls. Keep the live stream playing.
+                        val currentItem = c?.currentMediaItem
+                        val currentIndex = c?.currentMediaItemIndex ?: -1
+                        if (c != null && currentItem != null && currentIndex >= 0) {
+                            val artwork = info.artworkUrl.takeIf { it.isNotBlank() }
+                                ?.let { Uri.parse(it) }
+                                ?: Uri.parse("android.resource://ro.ipnet/drawable/radio_ipnet_artwork")
+                            val notificationMetadata = MediaMetadata.Builder()
+                                .setTitle(info.title)
+                                .setArtist(info.artist.ifBlank { station.name })
+                                .setAlbumTitle("${station.name} • Radio Ip-NeT")
+                                .setArtworkUri(artwork)
+                                .build()
+                            c.replaceMediaItem(
+                                currentIndex,
+                                currentItem.buildUpon()
+                                    .setMediaMetadata(notificationMetadata)
+                                    .build()
+                            )
+                        }
                     }
                 }
             } else {
