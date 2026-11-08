@@ -152,19 +152,46 @@ jobs:
             GRADLE="gradle"
           fi
 
-          # Maven Central may redirect this Kotlin artifact to GitHub Releases.
-          # Retry transient 502/503/504 gateway failures before giving up.
-          for attempt in 1 2 3; do
-            echo "Build Release: incercarea $attempt din 3"
-            if "$GRADLE" --no-daemon --refresh-dependencies clean assembleRelease; then
+          # Foloseste o oglinda Maven Central inaintea surselor implicite.
+          # Evita redirectarea artefactului Kotlin catre GitHub Releases,
+          # care a raspuns repetat cu HTTP 504.
+          cat > "$RUNNER_TEMP/repositories.init.gradle" <<'GRADLE_INIT'
+          settingsEvaluated { settings ->
+              settings.pluginManagement.repositories {
+                  maven {
+                      name = "GoogleMavenCentralMirror"
+                      url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+                  }
+              }
+          }
+          allprojects {
+              buildscript.repositories {
+                  maven {
+                      name = "GoogleMavenCentralMirror"
+                      url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+                  }
+              }
+              repositories {
+                  maven {
+                      name = "GoogleMavenCentralMirror"
+                      url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+                  }
+              }
+          }
+          GRADLE_INIT
+
+          # Incercari repetate fara --refresh-dependencies, pentru a pastra cache-ul.
+          for attempt in 1 2 3 4 5; do
+            echo "Build Release: incercarea $attempt din 5"
+            if "$GRADLE" --no-daemon --init-script "$RUNNER_TEMP/repositories.init.gradle" clean assembleRelease; then
               exit 0
             fi
-            if [ "$attempt" -lt 3 ]; then
-              sleep $((attempt * 20))
+            if [ "$attempt" -lt 5 ]; then
+              sleep $((attempt * 15))
             fi
           done
 
-          echo "EROARE: Build Release a esuat dupa 3 incercari."
+          echo "EROARE: Build Release a esuat dupa 5 incercari."
           exit 1
 
       - name: Collect and verify APK
