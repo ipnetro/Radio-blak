@@ -45,6 +45,25 @@ jobs:
           echo "Proiect Android detectat direct în rădăcina repository-ului."
           grep -n 'versionName\|versionCode' app/build.gradle.kts
 
+      - name: Set version from release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ ! "$VERSION" =~ ^([0-9]+)\\.([0-9]+)\\.([0-9]+)$ ]]; then
+            echo "Tag-ul trebuie să aibă formatul vMAJOR.MINOR.PATCH."
+            exit 1
+          fi
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+          PATCH="${BASH_REMATCH[3]}"
+          VERSION_CODE=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
+          sed -i -E "s/versionCode = [0-9]+/versionCode = $VERSION_CODE/" app/build.gradle.kts
+          sed -i -E "s/versionName = \"[^\"]+\"/versionName = \"$VERSION\"/" app/build.gradle.kts
+          grep -n 'versionCode\\|versionName' app/build.gradle.kts
+          echo "Release: $VERSION (versionCode $VERSION_CODE)"
+
       - name: Configure release signing
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
