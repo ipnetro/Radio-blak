@@ -310,28 +310,46 @@ private fun RadioScreen(controller: MediaController?) {
         checkForUpdate(showUpToDate = true)
     }
 
-    LaunchedEffect(controller, selected) {
+    LaunchedEffect(controller, selected, playing) {
+        // Poll immediately on station change, then at a short fixed interval.
+        // Do not wait for ExoPlayer to report isPlaying: the new station's metadata
+        // can be fetched while the audio stream is still connecting.
         var lastSongKey = ""
-        while (true) {
+        val stationIndex = selected
+        val station = stations[stationIndex]
+        while (selected == stationIndex) {
             val c = controller
-            val station = stations[selected]
-            if (c?.isPlaying == true && c.currentMediaItem != null) {
-                val info = runCatching { fetchAzuraCastNowPlaying(station.apiId, station.name) }.getOrNull()
-                if (info != null && info.title.isNotBlank()) {
+            if (playing || c?.isPlaying == true) {
+                val info = withContext(Dispatchers.IO) {
+                    kotlinx.coroutines.withTimeoutOrNull(2200) {
+                        fetchAzuraCastNowPlaying(station.apiId, station.name)
+                    }
+                }
+                // Discard late replies from a previous station.
+                if (selected == stationIndex && info != null && info.title.isNotBlank()) {
                     val display = if (info.artist.isNotBlank()) "${info.artist} — ${info.title}" else info.title
                     nowPlaying = display
-                    nowPlayingArtworkUrl = info.artworkUrl
+                    if (nowPlayingArtworkUrl != info.artworkUrl) {
+                        nowPlayingArtworkUrl = info.artworkUrl
+                    }
                     val songKey = "${info.artist}|${info.title}|${info.artworkUrl}"
                     if (songKey != lastSongKey) {
-                        // Update only the Compose UI here. Replacing the live MediaItem to push
-                        // metadata into the system notification can re-prepare/reopen an HLS/MP3
-                        // live stream and jump its live position. Never mutate the active playlist
-                        // item or seek when AzuraCast reports a new song.
                         lastSongKey = songKey
                     }
                 }
+            } else {
+                // Even before playback starts, fetch the selected station once immediately.
+                val info = withContext(Dispatchers.IO) {
+                    kotlinx.coroutines.withTimeoutOrNull(2200) {
+                        fetchAzuraCastNowPlaying(station.apiId, station.name)
+                    }
+                }
+                if (selected == stationIndex && info != null && info.title.isNotBlank()) {
+                    nowPlaying = if (info.artist.isNotBlank()) "${info.artist} — ${info.title}" else info.title
+                    nowPlayingArtworkUrl = info.artworkUrl
+                }
             }
-            delay(if (c?.isPlaying == true) 2000 else 10000)
+            delay(1000)
         }
     }
 
@@ -342,7 +360,7 @@ private fun RadioScreen(controller: MediaController?) {
                     connectTimeout = 7000
                     readTimeout = 7000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/1.1.41")
+                    setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/1.1.42")
                 }
                 try {
                     if (connection.responseCode !in 200..299) return@runCatching null
