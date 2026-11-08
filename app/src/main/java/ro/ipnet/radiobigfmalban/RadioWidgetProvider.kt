@@ -22,7 +22,11 @@ class RadioWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         when (intent.action) {
             ACTION_PLAY_PAUSE -> withController(context) { controller ->
-                if (controller.isPlaying) controller.pause() else controller.play()
+                if (controller.currentMediaItem == null) {
+                    context.startActivity(Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    })
+                } else if (controller.isPlaying) controller.pause() else controller.play()
                 refresh(context)
             }
             ACTION_STOP -> withController(context) { controller ->
