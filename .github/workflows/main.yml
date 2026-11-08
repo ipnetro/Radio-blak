@@ -1,159 +1,76 @@
 
-name: Build Radio Ip-NeT APK
-
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download repository
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
-      - name: Extract Android project
+      - name: Detect and extract Android project
         shell: bash
         run: |
           set -euo pipefail
 
-          mapfile -t ZIPS < <(find . -maxdepth 1 -type f -iname '*1.2.0*.zip')
+          rm -rf extracted
+          mkdir -p extracted
 
-          if [ "${#ZIPS[@]}" -ne 1 ]; then
-            echo "EROARE: Trebuie sa existe exact un ZIP pentru versiunea 1.2.0."
-            printf '%s\n' "${ZIPS[@]}"
+          FOUND=""
+
+          while IFS= read -r -d '' ZIP; do
+            echo "Verific arhiva: $ZIP"
+
+            TEMP="$RUNNER_TEMP/zip-check"
+            rm -rf "$TEMP"
+            mkdir -p "$TEMP"
+
+            unzip -o -q "$ZIP" -d "$TEMP" || continue
+
+            mapfile -t PROJECTS < <(
+              find "$TEMP" -type f \
+                \( -name settings.gradle.kts -o -name settings.gradle \) \
+                -not -path '*/build/*' |
+              while read -r SETTINGS; do
+                DIR="$(dirname "$SETTINGS")"
+                if [ -f "$DIR/app/build.gradle.kts" ] ||
+                   [ -f "$DIR/app/build.gradle" ]; then
+                  echo "$DIR"
+                fi
+              done
+            )
+
+            if [ "${#PROJECTS[@]}" -gt 0 ]; then
+              if [ -n "$FOUND" ]; then
+                echo "EROARE: Mai multe arhive contin proiecte Android."
+                exit 1
+              fi
+
+              FOUND="$ZIP"
+              cp -a "$TEMP/." extracted/
+            fi
+
+          done < <(
+            find . -maxdepth 1 -type f -iname '*.zip' -print0
+          )
+
+          if [ -z "$FOUND" ]; then
+            echo "EROARE: Nicio arhiva nu contine un proiect Android valid."
             exit 1
           fi
 
-          ZIP="${ZIPS[0]}"
-          echo "Arhiva selectata: $ZIP"
-
-          rm -rf extracted
-          mkdir -p extracted
-          unzip -o -q "$ZIP" -d extracted
+          echo "Arhiva selectata: $FOUND"
 
           mapfile -t PROJECTS < <(
-            find extracted -name settings.gradle.kts -printf '%h\n' |
-            while read -r DIR; do
-              if [ -f "$DIR/app/build.gradle.kts" ]; then
+            find extracted -type f \
+              \( -name settings.gradle.kts -o -name settings.gradle \) |
+            while read -r SETTINGS; do
+              DIR="$(dirname "$SETTINGS")"
+              if [ -f "$DIR/app/build.gradle.kts" ] ||
+                 [ -f "$DIR/app/build.gradle" ]; then
                 echo "$DIR"
               fi
             done
           )
 
           if [ "${#PROJECTS[@]}" -ne 1 ]; then
-            echo "EROARE: Trebuie sa existe un singur proiect Android."
-            printf '%s\n' "${PROJECTS[@]}"
+            echo "EROARE: Proiecte Android multiple sau invalide."
             exit 1
           fi
 
           PROJECT="${PROJECTS[0]}"
 
-          echo "Proiect Android: $PROJECT"
-
           test -f "$PROJECT/app/src/main/AndroidManifest.xml"
 
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
-
-      - name: Check Android package
-        run: |
-          grep -n 'applicationId' "$PROJECT/app/build.gradle.kts"
-          grep -n 'namespace' "$PROJECT/app/build.gradle.kts"
-
-      - name: Set release version
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          VERSION="${GITHUB_REF_NAME#v}"
-
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-
-          CODE=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
-
-          sed -i -E \
-            "s/versionCode = [0-9]+/versionCode = $CODE/; s/versionName = \"[^\"]+\"/versionName = \"$VERSION\"/" \
-            "$PROJECT/app/build.gradle.kts"
-
-      - name: Configure signing
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-
-          test -n "$KEYSTORE_BASE64"
-          test -n "$KEYSTORE_PASSWORD"
-          test -n "$KEY_ALIAS"
-          test -n "$KEY_PASSWORD"
-
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/radio.jks"
-
-          echo "RELEASE_STORE_FILE=$RUNNER_TEMP/radio.jks" >> "$GITHUB_ENV"
-          echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
-          echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
-          echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
-
-      - name: Build Android APK
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            gradle -p "$PROJECT" clean assembleRelease
-
-            mkdir -p release
-
-            cp "$PROJECT/app/build/outputs/apk/release/app-release.apk" \
-              release/Radio-Ip-NeT.apk
-
-          else
-            gradle -p "$PROJECT" assembleDebug
-          fi
-
-      - name: Upload debug APK
-        if: "!startsWith(github.ref, 'refs/tags/v')"
-        uses: actions/upload-artifact@v4
-        with:
-          name: Radio-Ip-NeT-debug
-          path: extracted/**/app/build/outputs/apk/debug/*.apk
-
-      - name: Publish APK to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          test -s release/Radio-Ip-NeT.apk
-
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" \
-              --title "Radio Ip-NeT $GITHUB_REF_NAME" \
-              --notes "Radio Ip-NeT update"
-
-          gh release upload "$GITHUB_REF_NAME" \
-            release/Radio-Ip-NeT.apk --clobber
