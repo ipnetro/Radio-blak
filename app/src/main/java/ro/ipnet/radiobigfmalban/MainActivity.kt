@@ -415,221 +415,283 @@ private fun RadioScreen(controller: MediaController?) {
 
     Box(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF260B13), Color(0xFF101117), Bg))
+            Brush.verticalGradient(
+                listOf(Color(0xFF310D19), Color(0xFF111219), Color(0xFF08090C))
+            )
         )
     ) {
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+                .padding(horizontal = 18.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Header premium
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box {
-                        Text(
-                            "☰",
-                            color = Red,
-                            fontSize = 27.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable { menuExpanded = true }.padding(end = 10.dp)
-                        )
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false }
-                        ) {
-                            DropdownMenuItem(text = { Text(if (stations[selected].name in favoriteNames) "Elimină de la favorite" else "Adaugă la favorite") }, onClick = {
+                    Surface(
+                        onClick = { menuExpanded = true },
+                        color = Color(0xFF21141A),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF5A2635))
+                    ) {
+                        Text("☰", color = Color.White, fontSize = 21.sp,
+                            modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp))
+                    }
+                    Spacer(Modifier.width(11.dp))
+                    Column {
+                        Text("IP•NET", color = Color.White, fontSize = 17.sp,
+                            fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                        Text("RADIO PLAYER", color = Color(0xFFB7AAB0), fontSize = 9.sp,
+                            letterSpacing = 1.8.sp)
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text(if (stations[selected].name in favoriteNames) "Elimină de la favorite" else "Adaugă la favorite") },
+                            onClick = {
                                 menuExpanded = false
                                 val name = stations[selected].name
                                 favoriteNames = if (name in favoriteNames) favoriteNames - name else favoriteNames + name
                                 prefs.edit().putStringSet("favorites", favoriteNames).apply()
-                            })
-                            DropdownMenuItem(text = { Text("Istoric ascultare") }, onClick = { menuExpanded = false; showHistoryDialog = true })
-                            DropdownMenuItem(
-                                text = { Text("Versiune") },
-                                onClick = {
-                                    menuExpanded = false
-                                    showVersionDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(updateMenuLabel) },
-                                onClick = {
-                                    scope.launch { checkForUpdate(showUpToDate = true) }
-                                }
-                            )
-                            if (updateAvailable && apkDownloadUrl.endsWith(".apk", true)) {
-                                DropdownMenuItem(
-                                    text = { Text("Descarcă APK") },
-                                    onClick = {
-                                        menuExpanded = false
-                                        (appContext as? MainActivity)?.downloadAndInstallApk(apkDownloadUrl)
-                                    }
-                                )
                             }
+                        )
+                        DropdownMenuItem(text = { Text("Istoric ascultare") }, onClick = { menuExpanded = false; showHistoryDialog = true })
+                        DropdownMenuItem(text = { Text("Versiune") }, onClick = { menuExpanded = false; showVersionDialog = true })
+                        DropdownMenuItem(text = { Text(updateMenuLabel) }, onClick = {
+                            menuExpanded = false
+                            scope.launch { checkForUpdate(showUpToDate = true) }
+                        })
+                        if (updateAvailable && apkDownloadUrl.endsWith(".apk", true)) {
+                            DropdownMenuItem(text = { Text("Descarcă APK") }, onClick = {
+                                menuExpanded = false
+                                (appContext as? MainActivity)?.downloadAndInstallApk(apkDownloadUrl)
+                            })
                         }
                     }
-                    Text("IP•NET RADIO", fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                 }
-                Surface(color = Color(0xFF35121D), shape = CircleShape) {
-                    Text("● LIVE PLAYER", color = Color(0xFFFF6B86),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        fontSize = 10.sp, letterSpacing = 1.sp)
-                }
-            }
-
-            Spacer(Modifier.height(18.dp))
-            Box(
-                Modifier.size(142.dp).background(
-                    Brush.radialGradient(listOf(Color(0xFF33343D), Color(0xFF111218), Bg)),
-                    CircleShape
-                ),
-                contentAlignment = Alignment.Center
-            ) {
                 Surface(
-                    Modifier.size(122.dp), shape = CircleShape, color = Color.Transparent,
-                    border = androidx.compose.foundation.BorderStroke(2.dp, Red.copy(alpha = .55f))
-                ) {}
-                Text("Radio\nIp-NeT", color = Red, fontSize = 19.sp, lineHeight = 21.sp, fontWeight = FontWeight.Black, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
-            Spacer(Modifier.height(12.dp))
-            Text("Radio Ip-NeT", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("FEEL THE MUSIC  •  LIVE", color = Color.LightGray,
-                fontSize = 10.sp, letterSpacing = 2.sp)
-
-            Spacer(Modifier.height(16.dp))
-            Surface(
-                color = Panel, shape = RoundedCornerShape(18.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF30313A)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Text("ACUM ASCULTI", color = Red, fontSize = 9.sp, letterSpacing = 1.5.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Text(stations[selected].name, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                    Text(stations[selected].subtitle, color = Color.LightGray, fontSize = 10.sp)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val cover = nowPlayingArtwork
-                        if (cover != null) {
-                            Image(
-                                bitmap = cover,
-                                contentDescription = "Coperta melodiei curente",
-                                modifier = Modifier.size(64.dp),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                Modifier.size(64.dp).background(Color(0xFF292A33), RoundedCornerShape(10.dp)),
-                                contentAlignment = Alignment.Center
-                            ) { Text("♫", color = Red, fontSize = 28.sp) }
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Text("♫ $nowPlaying", color = Color(0xFFFFA6B7), fontSize = 11.sp,
-                            modifier = Modifier.weight(1f))
-                    }
-                    Text(if (stations[selected].name in favoriteNames) "♥ În favorite" else "♡ Nu este favorit",
-                        color = accent, fontSize = 10.sp, modifier = Modifier.clickable {
-                            val name = stations[selected].name
-                            favoriteNames = if (name in favoriteNames) favoriteNames - name else favoriteNames + name
-                            prefs.edit().putStringSet("favorites", favoriteNames).apply()
-                        }.padding(top = 5.dp))
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { controller?.stop(); playing = false },
-                    shape = CircleShape, contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.size(50.dp)
-                ) { Text("■") }
-                Button(
-                    onClick = {
-                        val c = controller ?: return@Button
-                        if (c.isPlaying) { c.pause(); playing = false }
-                        else playStation(selected)
-                    },
-                    shape = CircleShape, contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.size(68.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Red)
-                ) { Text(if (playing) "Ⅱ" else "▶", fontSize = 25.sp) }
-                OutlinedButton(
-                    onClick = { muted = !muted; controller?.volume = if (muted) 0f else 1f },
-                    shape = CircleShape, contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.size(50.dp)
-                ) { Text(if (muted) "×" else "♫", fontSize = 18.sp) }
-            }
-
-            Spacer(Modifier.height(8.dp))
-            Text(
-                if (controller == null) "Pregătire player..." else status,
-                color = if (status.startsWith("Eroare")) Color(0xFFFF8A80) else Color(0xFFFF718A),
-                fontSize = 10.sp, maxLines = 2
-            )
-
-            Spacer(Modifier.height(16.dp))
-            Text("ALEGE POSTUL", modifier = Modifier.fillMaxWidth(),
-                color = Color.LightGray, fontSize = 11.sp, letterSpacing = 1.5.sp)
-            Spacer(Modifier.height(8.dp))
-
-            stations.forEachIndexed { index, station ->
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                        .clickable { playStation(index) },
-                    color = if (selected == index) Color(0xFF35131F) else Panel,
-                    shape = RoundedCornerShape(17.dp),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp, if (selected == index) Red else Color(0xFF30313A)
-                    )
+                    color = Color(0xFF35121D),
+                    shape = CircleShape,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF793044))
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp),
+                        Modifier.padding(horizontal = 11.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Box(Modifier.size(7.dp).background(Color(0xFFFF315B), CircleShape))
+                        Spacer(Modifier.width(7.dp))
+                        Text("LIVE", color = Color(0xFFFFA2B5), fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            // Main player card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFF17151C),
+                shape = RoundedCornerShape(28.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2630))
+            ) {
+                Column(Modifier.padding(18.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("ACUM SE REDĂ", color = Color(0xFFFF5575), fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                        Text("● ON AIR", color = Color(0xFFFF9BAD), fontSize = 9.sp,
+                            letterSpacing = 1.sp)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            Modifier.size(44.dp).background(
-                                Brush.linearGradient(listOf(Color(0xFF54182A), Color(0xFF211018))),
-                                RoundedCornerShape(13.dp)
+                            Modifier.size(116.dp).background(
+                                Brush.linearGradient(listOf(Color(0xFF7B203B), Color(0xFF24131D), Color(0xFF111117))),
+                                RoundedCornerShape(22.dp)
                             ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(listOf("HH", "DN", "PP", "TC")[index], color = Red,
-                                fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            if (nowPlayingArtwork != null) {
+                                Image(
+                                    bitmap = nowPlayingArtwork!!,
+                                    contentDescription = "Coperta melodiei curente",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("♫", color = Color(0xFFFF5274), fontSize = 43.sp)
+                                    Text("IP•NET", color = Color.White, fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                                }
+                            }
                         }
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(15.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(station.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Spacer(Modifier.height(2.dp))
-                            Text(station.subtitle, color = Color.LightGray, fontSize = 9.sp,
-                                letterSpacing = .6.sp)
+                            Text(stations[selected].name, color = Color.White,
+                                fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                            Spacer(Modifier.height(5.dp))
+                            Text(stations[selected].subtitle, color = Color(0xFFFF8299),
+                                fontSize = 9.sp, letterSpacing = 1.2.sp)
+                            Spacer(Modifier.height(12.dp))
+                            Text("MELODIA CURENTĂ", color = Color(0xFF9E9299),
+                                fontSize = 8.sp, letterSpacing = 1.2.sp)
+                            Spacer(Modifier.height(4.dp))
+                            Text(nowPlaying, color = Color(0xFFE8DDE1), fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium, maxLines = 3)
                         }
-                        Text(
-                            if (selected == index && playing) "● LIVE" else "▶",
-                            color = Red, fontSize = 11.sp, fontWeight = FontWeight.Bold
-                        )
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    Box(Modifier.fillMaxWidth().height(3.dp)
+                        .background(Color(0xFF3A2931), RoundedCornerShape(10.dp))) {
+                        Box(Modifier.fillMaxWidth(.38f).fillMaxHeight()
+                            .background(Brush.horizontalGradient(listOf(Color(0xFFFF1744), Color(0xFFFF8299))),
+                                RoundedCornerShape(10.dp)))
+                    }
+                    Spacer(Modifier.height(17.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            onClick = { controller?.stop(); playing = false; status = "Redare oprită" },
+                            color = Color(0xFF29232B), shape = CircleShape,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF49313B))
+                        ) {
+                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                                Text("■", color = Color(0xFFE8DDE1), fontSize = 16.sp)
+                            }
+                        }
+                        Spacer(Modifier.width(24.dp))
+                        Surface(
+                            onClick = {
+                                val c = controller ?: return@Surface
+                                if (c.isPlaying) { c.pause(); playing = false; status = "Pauză" }
+                                else playStation(selected)
+                            },
+                            color = Red, shape = CircleShape
+                        ) {
+                            Box(Modifier.size(66.dp), contentAlignment = Alignment.Center) {
+                                Text(if (playing) "Ⅱ" else "▶", color = Color.White, fontSize = 27.sp,
+                                    fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Spacer(Modifier.width(24.dp))
+                        Surface(
+                            onClick = { muted = !muted; controller?.volume = if (muted) 0f else 1f },
+                            color = Color(0xFF29232B), shape = CircleShape,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF49313B))
+                        ) {
+                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                                Text(if (muted) "×" else "♫", color = Color(0xFFE8DDE1), fontSize = 19.sp)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(13.dp))
+                    Text(
+                        if (controller == null) "Se pregătește playerul..." else status,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = if (status.startsWith("Eroare")) Color(0xFFFF8A80) else Color(0xFFB9AAB1),
+                        fontSize = 10.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        maxLines = 2
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(25.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("POSTURI RADIO", color = Color.White, fontSize = 17.sp,
+                        fontWeight = FontWeight.Black, letterSpacing = .5.sp)
+                    Text("Alege atmosfera preferată", color = Color(0xFF9D9299), fontSize = 11.sp)
+                }
+                Surface(color = Color(0xFF29151E), shape = CircleShape) {
+                    Text("${stations.size} POSTURI", color = Color(0xFFFF8299),
+                        fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp))
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+
+            stations.forEachIndexed { index, station ->
+                val isSelected = selected == index
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)
+                        .clickable { playStation(index) },
+                    color = if (isSelected) Color(0xFF351522) else Color(0xFF17161C),
+                    shape = RoundedCornerShape(19.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        if (isSelected) 1.5.dp else 1.dp,
+                        if (isSelected) Red.copy(alpha = .9f) else Color(0xFF302831)
+                    )
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(48.dp).background(
+                                Brush.linearGradient(listOf(Color(0xFF692039), Color(0xFF28151F))),
+                                RoundedCornerShape(15.dp)
+                            ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(listOf("HH", "DN", "PP", "TC").getOrElse(index) { "FM" },
+                                color = Color(0xFFFF7892), fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        }
+                        Spacer(Modifier.width(13.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(station.name, color = Color.White,
+                                fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                            Spacer(Modifier.height(4.dp))
+                            Text(station.subtitle, color = Color(0xFFAA9DA4),
+                                fontSize = 9.sp, letterSpacing = .8.sp)
+                        }
+                        if (isSelected && playing) {
+                            Text("● LIVE", color = Color(0xFFFF6684), fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold)
+                        } else {
+                            Text("▶", color = if (isSelected) Red else Color(0xFF9B8992),
+                                fontSize = 15.sp)
+                        }
                     }
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
             if (favoriteNames.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Text("POSTURILE MELE FAVORITE", modifier = Modifier.fillMaxWidth(), color = accent, fontSize = 11.sp)
+                Spacer(Modifier.height(17.dp))
+                Text("♥  FAVORITELE TALE", modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFFF8299), fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                 favoriteNames.forEach { favorite ->
-                    Text("♥  $favorite", modifier = Modifier.fillMaxWidth().clickable {
+                    Text("♥   $favorite", modifier = Modifier.fillMaxWidth().clickable {
                         stations.indexOfFirst { it.name == favorite }.takeIf { it >= 0 }?.let { playStation(it) }
-                    }.padding(vertical = 6.dp), color = Color.White)
+                    }.padding(vertical = 8.dp), color = Color.White, fontSize = 13.sp)
                 }
             }
-            Text("RADIO IP-NET • VERSION $installedVersion", color = Color.Gray,
-                fontSize = 9.sp, letterSpacing = 1.sp)
+
+            Spacer(Modifier.height(24.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF30252C)))
+            Spacer(Modifier.height(13.dp))
+            Text("RADIO IP•NET", color = Color(0xFFE8DDE1), fontSize = 11.sp,
+                fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Spacer(Modifier.height(4.dp))
+            Text("FEEL THE MUSIC  •  VERSION $installedVersion",
+                color = Color(0xFF81757C), fontSize = 9.sp, letterSpacing = 1.sp)
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
