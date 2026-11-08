@@ -1,4 +1,34 @@
 
+name: Build Radio Ip-NeT APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Detect Android project
         shell: bash
         run: |
@@ -26,17 +56,23 @@
 
             echo "Verific arhiva activa: $NAME"
 
-            unzip -o -q "$ZIP" -d "$TEMP"
+            if ! unzip -o -q "$ZIP" -d "$TEMP"; then
+              echo "Arhiva invalida: $NAME"
+              continue
+            fi
 
             while IFS= read -r SETTINGS; do
               DIR="$(dirname "$SETTINGS")"
 
-              if { [ -f "$DIR/app/build.gradle.kts" ] ||
-                   [ -f "$DIR/app/build.gradle" ]; } &&
-                 [ -f "$DIR/app/src/main/AndroidManifest.xml" ]; then
+              if {
+                [ -f "$DIR/app/build.gradle.kts" ] ||
+                [ -f "$DIR/app/build.gradle" ]
+              } && [ -f "$DIR/app/src/main/AndroidManifest.xml" ]; then
 
                 if [ -n "$FOUND" ]; then
-                  echo "EROARE: Exista mai multe proiecte active."
+                  echo "EROARE: Mai multe proiecte Android active."
+                  echo "Primul: $FOUND"
+                  echo "Altul: $DIR"
                   exit 1
                 fi
 
@@ -44,16 +80,166 @@
               fi
             done < <(
               find "$TEMP" -type f \
-                \( -name settings.gradle.kts -o -name settings.gradle \)
+                \( -name settings.gradle.kts -o -name settings.gradle \) \
+                -not -path '*/build/*'
             )
           done < <(
             find . -maxdepth 1 -type f -iname '*.zip' -print0
           )
 
           if [ -z "$FOUND" ]; then
-            echo "EROARE: Nu am gasit proiectul Android."
+            echo "EROARE: Nu am gasit proiectul Android activ."
             exit 1
           fi
 
           echo "Proiect selectat: $FOUND"
           echo "PROJECT=$FOUND" >> "$GITHUB_ENV"
+
+      - name: Check application ID
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD="$PROJECT/app/build.gradle.kts"
+
+          if [ ! -f "$BUILD" ]; then
+            BUILD="$PROJECT/app/build.gradle"
+          fi
+
+          grep -n 'applicationId' "$BUILD"
+
+          if ! grep -Eq \
+            'applicationId[[:space:]]*(=|[[:space:]])[[:space:]]*"ro\.ipnet"' \
+            "$BUILD"; then
+            echo "EROARE: applicationId trebuie sa fie ro.ipnet."
+            exit 1
+          fi
+
+      - name: Set release versionCode
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD="$PROJECT/app/build.gradle.kts"
+
+          if [ ! -f "$BUILD" ]; then
+            BUILD="$PROJECT/app/build.gradle"
+          fi
+
+          OLD_CODE=$(grep -Eo \
+            'versionCode[[:space:]]*=[[:space:]]*[0-9]+' "$BUILD" |
+            head -n 1 | grep -Eo '[0-9]+')
+
+          NEW_CODE=$((OLD_CODE + GITHUB_RUN_NUMBER))
+
+          sed -i -E \
+            "s/(versionCode[[:space:]]*=[[:space:]]*)[0-9]+/\1$NEW_CODE/" \
+            "$BUILD"
+
+          echo "VersionCode: $OLD_CODE -> $NEW_CODE"
+          grep -n 'versionName' "$BUILD"
+
+      - name: Configure signing
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+
+          printf '%s' "$KEYSTORE_BASE64" |
+            base64 --decode > "$RUNNER_TEMP/radio.jks"
+
+          {
+            echo "RELEASE_STORE_FILE=$RUNNER_TEMP/radio.jks"
+            echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "RELEASE_KEY_ALIAS=$KEY_ALIAS"
+            echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Build Android APK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd "$PROJECT"
+
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            GRADLE="./gradlew"
+          else
+            GRADLE="gradle"
+          fi
+
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            "$GRADLE" --no-daemon clean assembleRelease
+          else
+            "$GRADLE" --no-daemon assembleDebug
+          fi
+
+      - name: Collect APK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            APK_DIR="$PROJECT/app/build/outputs/apk/release"
+          else
+            APK_DIR="$PROJECT/app/build/outputs/apk/debug"
+          fi
+
+          if [ ! -d "$APK_DIR" ]; then
+            echo "EROARE: Directorul APK nu exista: $APK_DIR"
+            exit 1
+          fi
+
+          mapfile -t APKS < <(
+            find "$APK_DIR" -type f -name '*.apk' \
+              ! -name '*unsigned*'
+          )
+
+          if [ "${#APKS[@]}" -ne 1 ]; then
+            echo "EROARE: Trebuie sa existe exact un APK."
+            printf '%s\n' "${APKS[@]}"
+            exit 1
+          fi
+
+          mkdir -p release
+          cp "${APKS[0]}" release/Radio-Ip-NeT.apk
+
+          ls -lh release/Radio-Ip-NeT.apk
+
+      - name: Upload debug APK
+        if: "!startsWith(github.ref, 'refs/tags/v')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: Radio-Ip-NeT-debug
+          path: release/Radio-Ip-NeT.apk
+          if-no-files-found: error
+
+      - name: Publish APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          test -s release/Radio-Ip-NeT.apk
+
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" \
+              --title "Radio Ip-NeT $GITHUB_REF_NAME" \
+              --notes "Radio Ip-NeT Android Release"
+
+          gh release upload "$GITHUB_REF_NAME" \
+            release/Radio-Ip-NeT.apk --clobber
