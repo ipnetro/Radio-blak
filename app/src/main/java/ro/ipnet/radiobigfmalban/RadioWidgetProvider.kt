@@ -1,5 +1,7 @@
 package ro.ipnet.radiobigfmalban
 
+import ro.ipnet.R
+
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
