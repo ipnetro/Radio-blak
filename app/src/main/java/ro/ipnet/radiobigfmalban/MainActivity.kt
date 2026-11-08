@@ -223,6 +223,15 @@ private fun RadioScreen(controller: MediaController?) {
                         playing = false
                     }
                 }
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    val nextIndex = stations.indexOfFirst { it.apiId == mediaItem?.mediaId }
+                    if (nextIndex >= 0) {
+                        selected = nextIndex
+                        prefs.edit().putInt("last_station_index", nextIndex)
+                            .putString("last_station_name", stations[nextIndex].name).apply()
+                        RadioWidgetProvider.refresh(appContext)
+                    }
+                }
             }
             activeController.addListener(listener)
             activeController.volume = playerVolume
@@ -246,18 +255,22 @@ private fun RadioScreen(controller: MediaController?) {
         nowPlayingArtwork = null
         scope.launch {
             try {
-                val streamUrl = resolvePlayableUrl(stations[index].url)
-                val metadata = androidx.media3.common.MediaMetadata.Builder()
-                    .setTitle(stations[index].name)
-                    .setArtist("Radio Ip-NeT")
-                    .setAlbumTitle("Radio Ip-NeT • LIVE")
-                    .setArtworkUri(Uri.parse("android.resource://ro.ipnet/drawable/radio_ipnet_artwork"))
-                    .build()
-                val mediaItem = MediaItem.Builder()
-                    .setUri(streamUrl)
-                    .setMediaMetadata(metadata)
-                    .build()
-                c.setMediaItem(mediaItem)
+                val playlist = stations.mapIndexed { stationIndex, station ->
+                    val streamUrl = if (stationIndex == index) resolvePlayableUrl(station.url)
+                        else runCatching { resolvePlayableUrl(station.url) }.getOrDefault(station.url)
+                    val metadata = androidx.media3.common.MediaMetadata.Builder()
+                        .setTitle(station.name)
+                        .setArtist("Radio Ip-NeT")
+                        .setAlbumTitle("Radio Ip-NeT • LIVE")
+                        .setArtworkUri(Uri.parse("android.resource://ro.ipnet/drawable/radio_ipnet_artwork"))
+                        .build()
+                    MediaItem.Builder()
+                        .setMediaId(station.apiId)
+                        .setUri(streamUrl)
+                        .setMediaMetadata(metadata)
+                        .build()
+                }
+                c.setMediaItems(playlist, index, 0L)
                 c.prepare()
                 c.play()
                 playing = true
