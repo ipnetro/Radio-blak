@@ -29,6 +29,14 @@ class RadioWidgetProvider : AppWidgetProvider() {
                 controller.stop()
                 refresh(context)
             }
+            ACTION_PREVIOUS -> withController(context) { controller ->
+                if (controller.hasPreviousMediaItem()) controller.seekToPreviousMediaItem()
+                refresh(context)
+            }
+            ACTION_NEXT -> withController(context) { controller ->
+                if (controller.hasNextMediaItem()) controller.seekToNextMediaItem()
+                refresh(context)
+            }
         }
     }
 
@@ -48,6 +56,8 @@ class RadioWidgetProvider : AppWidgetProvider() {
     companion object {
         const val ACTION_PLAY_PAUSE = "ro.ipnet.radiobigfmalban.WIDGET_PLAY_PAUSE"
         const val ACTION_STOP = "ro.ipnet.radiobigfmalban.WIDGET_STOP"
+        const val ACTION_PREVIOUS = "ro.ipnet.radiobigfmalban.WIDGET_PREVIOUS"
+        const val ACTION_NEXT = "ro.ipnet.radiobigfmalban.WIDGET_NEXT"
 
         fun refresh(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -66,7 +76,9 @@ class RadioWidgetProvider : AppWidgetProvider() {
                 }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_root, openIntent)
+            views.setOnClickPendingIntent(R.id.widget_previous, broadcast(context, ACTION_PREVIOUS, 13))
             views.setOnClickPendingIntent(R.id.widget_play, broadcast(context, ACTION_PLAY_PAUSE, 11))
+            views.setOnClickPendingIntent(R.id.widget_next, broadcast(context, ACTION_NEXT, 14))
             views.setOnClickPendingIntent(R.id.widget_stop, broadcast(context, ACTION_STOP, 12))
             manager.updateAppWidget(id, views)
         }
