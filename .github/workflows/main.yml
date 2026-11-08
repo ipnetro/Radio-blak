@@ -1,72 +1,29 @@
+name: Build Radio Ip-NeT APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
       - name: Detect and extract Android project
         shell: bash
         run: |
-          set -euo pipefail
+          echo "Aici vine codul de detectare a arhivei"
 
-          rm -rf extracted
-          mkdir -p extracted
-
-          FOUND=""
-
-          while IFS= read -r -d '' ZIP; do
-            echo "Verific arhiva: $ZIP"
-
-            TEMP="$RUNNER_TEMP/zip-check"
-            rm -rf "$TEMP"
-            mkdir -p "$TEMP"
-
-            unzip -o -q "$ZIP" -d "$TEMP" || continue
-
-            mapfile -t PROJECTS < <(
-              find "$TEMP" -type f \
-                \( -name settings.gradle.kts -o -name settings.gradle \) \
-                -not -path '*/build/*' |
-              while read -r SETTINGS; do
-                DIR="$(dirname "$SETTINGS")"
-                if [ -f "$DIR/app/build.gradle.kts" ] ||
-                   [ -f "$DIR/app/build.gradle" ]; then
-                  echo "$DIR"
-                fi
-              done
-            )
-
-            if [ "${#PROJECTS[@]}" -gt 0 ]; then
-              if [ -n "$FOUND" ]; then
-                echo "EROARE: Mai multe arhive contin proiecte Android."
-                exit 1
-              fi
-
-              FOUND="$ZIP"
-              cp -a "$TEMP/." extracted/
-            fi
-          done < <(
-            find . -maxdepth 1 -type f -iname '*.zip' -print0
-          )
-
-          if [ -z "$FOUND" ]; then
-            echo "EROARE: Nicio arhiva nu contine un proiect Android valid."
-            exit 1
-          fi
-
-          echo "Arhiva selectata: $FOUND"
-
-          mapfile -t PROJECTS < <(
-            find extracted -type f \
-              \( -name settings.gradle.kts -o -name settings.gradle \) |
-            while read -r SETTINGS; do
-              DIR="$(dirname "$SETTINGS")"
-              if [ -f "$DIR/app/build.gradle.kts" ] ||
-                 [ -f "$DIR/app/build.gradle" ]; then
-                echo "$DIR"
-              fi
-            done
-          )
-
-          if [ "${#PROJECTS[@]}" -ne 1 ]; then
-            echo "EROARE: Proiecte Android multiple sau invalide."
-            exit 1
-          fi
-
-          PROJECT="${PROJECTS[0]}"
-          test -f "$PROJECT/app/src/main/AndroidManifest.xml"
-          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+      - name: Build Android APK
+        run: |
+          echo "Aici vine compilarea"
