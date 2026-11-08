@@ -163,6 +163,12 @@ jobs:
                       url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
                   }
               }
+              settings.dependencyResolutionManagement.repositories {
+                  maven {
+                      name = "GoogleMavenCentralMirror"
+                      url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+                  }
+              }
           }
           allprojects {
               buildscript.repositories {
@@ -171,14 +177,7 @@ jobs:
                       url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
                   }
               }
-              repositories {
-                  maven {
-                      name = "GoogleMavenCentralMirror"
-                      url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
-                  }
-              }
           }
-          GRADLE_INIT
 
           # Incercari repetate fara --refresh-dependencies, pentru a pastra cache-ul.
           for attempt in 1 2 3 4 5; do
