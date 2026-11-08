@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          ZIP=$(find . -maxdepth 1 -iname 'Radio-Ip-NeT-1.1.39-corectat.zip' | head -1)
+          ZIP=$(find . -maxdepth 1 -iname 'Radio-Ip-NeT-1.2.0-sursa-curata.zip' | head -1)
           test -n "$ZIP" || { echo "Arhiva nu a fost gasita"; exit 1; }
           rm -rf extracted
           mkdir -p extracted
