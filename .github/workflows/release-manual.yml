@@ -1,4 +1,4 @@
-name: Build and publish Radio Ip-NeT Release APK
+name: Build Radio Ip-NeT signed APK
 
 on:
   workflow_dispatch:
@@ -134,15 +134,3 @@ jobs:
           path: release/Radio-Ip-NeT.apk
           if-no-files-found: error
           overwrite: true
-
-      - name: Upload signed Release APK to existing GitHub Release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          test -s release/Radio-Ip-NeT.apk
-          TAG="v1.0.1"
-          gh release view "$TAG" >/dev/null
-          gh release upload "$TAG" release/Radio-Ip-NeT.apk --clobber
-          echo "APK publicat în Release $TAG"
