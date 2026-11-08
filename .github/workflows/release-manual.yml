@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          token: ${{ github.token }}
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -28,88 +29,49 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Detect Android project from active ZIP
+      # One-time migration: expand the latest source ZIP into normal repository files.
+      # Existing .github workflows are deliberately preserved.
+      - name: Migrate source ZIP to direct repository files
         shell: bash
         run: |
           set -euo pipefail
 
-          ROOT="$RUNNER_TEMP/radio-projects"
-          mkdir -p "$ROOT"
-
-          FOUND=""
-          INDEX=0
-
-          while IFS= read -r -d '' ZIP; do
-            NAME="$(basename "$ZIP")"
-
-            case "$NAME" in
-              back*|BACK*)
-                echo "Backup ignorat: $NAME"
-                continue
-                ;;
-            esac
-
-            INDEX=$((INDEX + 1))
-            TEMP="$ROOT/project-$INDEX"
-            mkdir -p "$TEMP"
-
-            echo "Verific arhiva activa: $NAME"
-
-            if ! unzip -o -q "$ZIP" -d "$TEMP"; then
-              echo "Arhiva invalida: $NAME"
-              continue
-            fi
-
-            while IFS= read -r SETTINGS; do
-              DIR="$(dirname "$SETTINGS")"
-
-              if {
-                [ -f "$DIR/app/build.gradle.kts" ] ||
-                [ -f "$DIR/app/build.gradle" ]
-              } && [ -f "$DIR/app/src/main/AndroidManifest.xml" ]; then
-                if [ -n "$FOUND" ]; then
-                  echo "EROARE: Mai multe proiecte Android active."
-                  echo "Primul: $FOUND"
-                  echo "Altul: $DIR"
-                  exit 1
-                fi
-                FOUND="$DIR"
-              fi
-            done < <(
-              find "$TEMP" -type f \
-                \( -name settings.gradle.kts -o -name settings.gradle \) \
-                -not -path '*/build/*'
-            )
-          done < <(
-            find . -maxdepth 1 -type f -iname '*.zip' -print0
-          )
-
-          if [ -z "$FOUND" ]; then
-            echo "EROARE: Nu am gasit proiectul Android activ."
-            exit 1
+          if [ -f app/build.gradle.kts ] && [ -f app/src/main/AndroidManifest.xml ]; then
+            echo "Proiect Android direct deja prezent; nu mai folosesc ZIP."
+            exit 0
           fi
 
-          echo "Proiect selectat: $FOUND"
-          echo "PROJECT=$FOUND" >> "$GITHUB_ENV"
+          ZIP="Radio-Ip-NeT-1.1.42-NOWPLAYING-FIX.zip"
+          test -s "$ZIP"
+
+          TEMP="$RUNNER_TEMP/radio-source"
+          mkdir -p "$TEMP"
+          unzip -q "$ZIP" -d "$TEMP"
+
+          test -f "$TEMP/settings.gradle.kts"
+          test -f "$TEMP/app/build.gradle.kts"
+          test -f "$TEMP/app/src/main/AndroidManifest.xml"
+
+          # Copy source and resources, but never replace the live GitHub workflows.
+          rsync -a --exclude='.github/' "$TEMP/" ./
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- ':!.github/workflows/main.yml' ':!.github/workflows/release-manual.yml'
+          if ! git diff --cached --quiet; then
+            git commit -m "Migrate Android project from ZIP to direct source files [skip ci]"
+            git push origin HEAD:main
+          else
+            echo "Nu există fișiere noi de migrat."
+          fi
 
       - name: Check application ID
         shell: bash
         run: |
           set -euo pipefail
-
-          BUILD="$PROJECT/app/build.gradle.kts"
-          if [ ! -f "$BUILD" ]; then
-            BUILD="$PROJECT/app/build.gradle"
-          fi
-
-          grep -n 'applicationId' "$BUILD"
-
-          if ! grep -Eq \
-            'applicationId[[:space:]]*(=|[[:space:]])[[:space:]]*"ro\.ipnet"' \
-            "$BUILD"; then
-            echo "EROARE: applicationId trebuie sa fie ro.ipnet."
-            exit 1
-          fi
+          test -f app/build.gradle.kts
+          grep -n 'applicationId' app/build.gradle.kts
+          grep -Eq 'applicationId[[:space:]]*=[[:space:]]*"ro\.ipnet"' app/build.gradle.kts
 
       - name: Configure signing
         shell: bash
@@ -120,17 +82,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
-
           test -n "$KEYSTORE_BASE64"
           test -n "$KEYSTORE_PASSWORD"
           test -n "$KEY_ALIAS"
           test -n "$KEY_PASSWORD"
-
-          printf '%s' "$KEYSTORE_BASE64" |
-            base64 --decode > "$RUNNER_TEMP/radio.jks"
-
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/radio.jks"
           test -s "$RUNNER_TEMP/radio.jks"
-
           {
             echo "RELEASE_STORE_FILE=$RUNNER_TEMP/radio.jks"
             echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD"
@@ -142,66 +99,35 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          cd "$PROJECT"
-
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            GRADLE="./gradlew"
-          else
-            GRADLE="gradle"
-          fi
-
-          # Retry for transient Maven Central / JetBrains gateway errors.
+          chmod +x ./gradlew 2>/dev/null || true
+          GRADLE="./gradlew"
+          if [ ! -f ./gradlew ]; then GRADLE="gradle"; fi
           for attempt in 1 2 3 4 5; do
-            echo "Build Release: incercarea $attempt din 5"
-            if "$GRADLE" --no-daemon clean assembleRelease; then
-              exit 0
-            fi
-            if [ "$attempt" -lt 5 ]; then
-              sleep $((attempt * 15))
-            fi
+            echo "Build Release: încercarea $attempt din 5"
+            if $GRADLE --no-daemon clean assembleRelease; then exit 0; fi
+            if [ "$attempt" -lt 5 ]; then sleep $((attempt * 15)); fi
           done
-
-          echo "EROARE: Build Release a esuat dupa 5 incercari."
+          echo "EROARE: Build Release a eșuat după 5 încercări."
           exit 1
 
       - name: Collect and verify APK
         shell: bash
         run: |
           set -euo pipefail
-
           mkdir -p release
-          mapfile -t APKS < <(
-            find "$PROJECT" -type f -name '*.apk'               -path '*/build/outputs/apk/*'               ! -path '*/debug/*'               ! -name '*unsigned*'
-          )
-
+          mapfile -t APKS < <(find app/build/outputs/apk/release -type f -name '*.apk' ! -name '*unsigned*')
           if [ "${#APKS[@]}" -ne 1 ]; then
-            echo "EROARE: Trebuie sa existe exact un APK Release. Gasite: ${#APKS[@]}"
-            printf '%s\n' "${APKS[@]}"
-            find "$PROJECT" -type f -name '*.apk' -print
+            echo "EROARE: Trebuie exact un APK Release. Găsite: ${#APKS[@]}"
+            find app/build/outputs/apk -type f -name '*.apk' -print || true
             exit 1
           fi
-
           cp "${APKS[0]}" release/Radio-Ip-NeT.apk
           test -s release/Radio-Ip-NeT.apk
-
-          if command -v apksigner >/dev/null 2>&1; then
-            apksigner verify --verbose release/Radio-Ip-NeT.apk
-          fi
-
+          if command -v apksigner >/dev/null 2>&1; then apksigner verify --verbose release/Radio-Ip-NeT.apk; fi
           ls -lh release/Radio-Ip-NeT.apk
           sha256sum release/Radio-Ip-NeT.apk
 
-      - name: Upload identical APK as Debug artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Radio-Ip-NeT-debug
-          path: release/Radio-Ip-NeT.apk
-          if-no-files-found: error
-          overwrite: true
-
-      - name: Upload identical APK as Release artifact
+      - name: Upload Release APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Radio-Ip-NeT-release
@@ -215,14 +141,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-
           test -s release/Radio-Ip-NeT.apk
-
           TAG="v1.0.1"
-
           gh release view "$TAG" >/dev/null
-
-          gh release upload "$TAG" \
-            release/Radio-Ip-NeT.apk --clobber
-
-          echo "APK publicat in Release $TAG"
+          gh release upload "$TAG" release/Radio-Ip-NeT.apk --clobber
+          echo "APK publicat în Release $TAG"
