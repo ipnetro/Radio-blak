@@ -185,6 +185,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
     val prefs = remember { appContext.getSharedPreferences("radio_ipnet_features", Context.MODE_PRIVATE) }
     var selected by remember { mutableIntStateOf(prefs.getInt("last_station_index", 1).coerceIn(0, defaultStations.lastIndex)) }
     var playing by remember { mutableStateOf(false) }
+    var stationUnavailable by remember { mutableStateOf(false) }
     var playerVolume by remember { mutableFloatStateOf(prefs.getFloat("player_volume", 1f).coerceIn(0f, 1f)) }
     var muted by remember { mutableStateOf(playerVolume <= 0f) }
     var status by remember { mutableStateOf("Pregătit pentru redare") }
@@ -234,6 +235,10 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     // A station can be offline without taking down the app or the player screen.
                     playing = false
+                    stationUnavailable = true
+                    nowPlaying = "Post indisponibil"
+                    nowPlayingArtworkUrl = ""
+                    nowPlayingArtwork = null
                     status = "Postul radio nu este disponibil momentan. Alege alt post sau încearcă din nou."
                 }
 
@@ -262,9 +267,10 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
             .apply()
         RadioWidgetProvider.refresh(appContext)
         val c = controller ?: run { status = "Playerul se conectează..."; return }
+        stationUnavailable = false
         status = "Se conectează la ${stations[index].name}..."
-        // Afișăm imediat postul selectat până sosește metadatele melodiei noi.
-        nowPlaying = "Se încarcă melodia…"
+        // Curățăm imediat metadatele vechi.
+        nowPlaying = "Se conectează la post…"
         nowPlayingArtworkUrl = ""
         nowPlayingArtwork = null
         scope.launch {
@@ -287,14 +293,18 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                 c.setMediaItems(playlist, index, 0L)
                 c.prepare()
                 c.play()
-                playing = true
-                status = "Se redă: ${stations[index].name}"
+                playing = false
+                status = "Se conectează la ${stations[index].name}..."
                 nowPlaying = stations[index].name
                 historyNames = (listOf(stations[index].name) + historyNames.filterNot { it == stations[index].name }).take(20)
                 prefs.edit().putString("history", historyNames.joinToString("\n")).apply()
             } catch (e: Exception) {
                 playing = false
-                status = "Eroare la conectare: ${e.message ?: "playlist invalid"}"
+                stationUnavailable = true
+                nowPlaying = "Post indisponibil"
+                nowPlayingArtworkUrl = ""
+                nowPlayingArtwork = null
+                status = "Postul radio nu este disponibil momentan. Alege alt post sau încearcă din nou."
             }
         }
     }
@@ -510,7 +520,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
         val station = stations[stationIndex]
         while (selected == stationIndex) {
             val c = controller
-            if (playing || c?.isPlaying == true) {
+            if (!stationUnavailable && (playing || c?.isPlaying == true)) {
                 val info = withContext(Dispatchers.IO) {
                     kotlinx.coroutines.withTimeoutOrNull(5000) {
                         fetchAzuraCastNowPlaying(station.apiId, station.name)
@@ -550,7 +560,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                         }
                     }
                 }
-            } else {
+            } else if (!stationUnavailable) {
                 // Even before playback starts, fetch the selected station once immediately.
                 val info = withContext(Dispatchers.IO) {
                     kotlinx.coroutines.withTimeoutOrNull(5000) {
@@ -715,19 +725,21 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                             Text(stations[selected].subtitle, color = Color(0xFFFF8299),
                                 fontSize = 9.sp, letterSpacing = 1.2.sp)
                             Spacer(Modifier.height(12.dp))
-                            Text("MELODIA CURENTĂ", color = Color(0xFF9E9299),
+                            Text(if (stationUnavailable) "STARE POST" else "MELODIA CURENTĂ", color = Color(0xFF9E9299),
                                 fontSize = 8.sp, letterSpacing = 1.2.sp)
                             Spacer(Modifier.height(4.dp))
-                            Text(nowPlaying, color = Color(0xFFE8DDE1), fontSize = 12.sp,
+                            Text(if (stationUnavailable) "Post indisponibil" else nowPlaying, color = Color(0xFFE8DDE1), fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium, maxLines = 3)
                         }
                     }
-                    Spacer(Modifier.height(18.dp))
-                    Box(Modifier.fillMaxWidth().height(3.dp)
-                        .background(Color(0xFF3A2931), RoundedCornerShape(10.dp))) {
-                        Box(Modifier.fillMaxWidth(.38f).fillMaxHeight()
-                            .background(Brush.horizontalGradient(listOf(Color(0xFFFF1744), Color(0xFFFF8299))),
-                                RoundedCornerShape(10.dp)))
+                    if (!stationUnavailable) {
+                        Spacer(Modifier.height(18.dp))
+                        Box(Modifier.fillMaxWidth().height(3.dp)
+                            .background(Color(0xFF3A2931), RoundedCornerShape(10.dp))) {
+                            Box(Modifier.fillMaxWidth(.38f).fillMaxHeight()
+                                .background(Brush.horizontalGradient(listOf(Color(0xFFFF1744), Color(0xFFFF8299))),
+                                    RoundedCornerShape(10.dp)))
+                        }
                     }
                     Spacer(Modifier.height(17.dp))
                     Row(
@@ -736,7 +748,15 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            onClick = { controller?.stop(); playing = false; status = "Redare oprită" },
+                            onClick = {
+                                controller?.stop()
+                                playing = false
+                                stationUnavailable = false
+                                nowPlaying = "Redare oprită"
+                                nowPlayingArtworkUrl = ""
+                                nowPlayingArtwork = null
+                                status = "Redare oprită"
+                            },
                             color = Color(0xFF29232B), shape = CircleShape,
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF49313B))
                         ) {
