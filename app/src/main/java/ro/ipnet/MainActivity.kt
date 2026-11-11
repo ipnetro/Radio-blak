@@ -186,6 +186,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
     var selected by remember { mutableIntStateOf(prefs.getInt("last_station_index", 1).coerceIn(0, defaultStations.lastIndex)) }
     var playing by remember { mutableStateOf(false) }
     var stationUnavailable by remember { mutableStateOf(false) }
+    var stationConnecting by remember { mutableStateOf(false) }
     var playerVolume by remember { mutableFloatStateOf(prefs.getFloat("player_volume", 1f).coerceIn(0f, 1f)) }
     var muted by remember { mutableStateOf(playerVolume <= 0f) }
     var status by remember { mutableStateOf("Pregătit pentru redare") }
@@ -236,6 +237,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                     // A station can be offline without taking down the app or the player screen.
                     playing = false
                     stationUnavailable = true
+                    stationConnecting = false
                     nowPlaying = "Post indisponibil"
                     nowPlayingArtworkUrl = ""
                     nowPlayingArtwork = null
@@ -268,6 +270,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
         RadioWidgetProvider.refresh(appContext)
         val c = controller ?: run { status = "Playerul se conectează..."; return }
         stationUnavailable = false
+        stationConnecting = true
         status = "Se conectează la ${stations[index].name}..."
         // Curățăm imediat metadatele vechi.
         nowPlaying = "Se conectează la post…"
@@ -301,6 +304,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
             } catch (e: Exception) {
                 playing = false
                 stationUnavailable = true
+                stationConnecting = false
                 nowPlaying = "Post indisponibil"
                 nowPlayingArtworkUrl = ""
                 nowPlayingArtwork = null
@@ -530,6 +534,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                 if (selected == stationIndex && !stationUnavailable && info != null && info.title.isNotBlank()) {
                     val display = if (info.artist.isNotBlank()) "${info.artist} — ${info.title}" else info.title
                     nowPlaying = display
+                    stationConnecting = false
                     if (nowPlayingArtworkUrl != info.artworkUrl) {
                         nowPlayingArtwork = null
                         nowPlayingArtworkUrl = info.artworkUrl
@@ -570,6 +575,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                 }
                 if (selected == stationIndex && !stationUnavailable && info != null && info.title.isNotBlank()) {
                     nowPlaying = if (info.artist.isNotBlank()) "${info.artist} — ${info.title}" else info.title
+                    stationConnecting = false
                     if (nowPlayingArtworkUrl != info.artworkUrl) {
                         nowPlayingArtwork = null
                         nowPlayingArtworkUrl = info.artworkUrl
@@ -714,7 +720,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                             ),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (nowPlayingArtwork != null) {
+                            if (nowPlayingArtwork != null && !stationConnecting && !stationUnavailable) {
                                 Image(
                                     bitmap = nowPlayingArtwork!!,
                                     contentDescription = "Coperta melodiei curente",
