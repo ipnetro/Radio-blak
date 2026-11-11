@@ -45,8 +45,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import org.json.JSONException
 import org.json.JSONObject
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 
 private data class Station(val name: String, val subtitle: String, val url: String, val apiId: String)
@@ -501,7 +505,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
             val c = controller
             if (playing || c?.isPlaying == true) {
                 val info = withContext(Dispatchers.IO) {
-                    kotlinx.coroutines.withTimeoutOrNull(2200) {
+                    kotlinx.coroutines.withTimeoutOrNull(5000) {
                         fetchAzuraCastNowPlaying(station.apiId, station.name)
                     }
                 }
@@ -542,7 +546,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
             } else {
                 // Even before playback starts, fetch the selected station once immediately.
                 val info = withContext(Dispatchers.IO) {
-                    kotlinx.coroutines.withTimeoutOrNull(2200) {
+                    kotlinx.coroutines.withTimeoutOrNull(5000) {
                         fetchAzuraCastNowPlaying(station.apiId, station.name)
                     }
                 }
@@ -1024,6 +1028,18 @@ private suspend fun fetchAzuraCastNowPlaying(stationId: String, stationName: Str
             val safeArt = art.takeIf { it.startsWith("https://", true) || it.startsWith("http://", true) }.orEmpty()
             if (title.isBlank() || title.equals(stationName, ignoreCase = true)) null
             else NowPlayingInfo(title, artist, safeArt)
+        } catch (cancelled: CancellationException) {
+            // Preserve structured coroutine cancellation; never turn it into a network miss.
+            throw cancelled
+        } catch (timeout: SocketTimeoutException) {
+            // Metadata is optional. A slow AzuraCast/API connection must not crash the UI.
+            null
+        } catch (networkError: IOException) {
+            // Offline server, TLS handshake or connection reset: keep audio playback running.
+            null
+        } catch (invalidResponse: JSONException) {
+            // Ignore malformed or unexpected API payloads and retry on the next poll.
+            null
         } finally {
             connection.disconnect()
         }
