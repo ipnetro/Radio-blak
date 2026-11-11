@@ -29,42 +29,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # One-time migration: expand the latest source ZIP into normal repository files.
-      # Existing .github workflows are deliberately preserved.
-      - name: Migrate source ZIP to direct repository files
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [ -f app/build.gradle.kts ] && [ -f app/src/main/AndroidManifest.xml ]; then
-            echo "Proiect Android direct deja prezent; nu mai folosesc ZIP."
-            exit 0
-          fi
-
-          ZIP="Radio-Ip-NeT-1.1.42-NOWPLAYING-FIX.zip"
-          test -s "$ZIP"
-
-          TEMP="$RUNNER_TEMP/radio-source"
-          mkdir -p "$TEMP"
-          unzip -q "$ZIP" -d "$TEMP"
-
-          test -f "$TEMP/settings.gradle.kts"
-          test -f "$TEMP/app/build.gradle.kts"
-          test -f "$TEMP/app/src/main/AndroidManifest.xml"
-
-          # Copy source and resources, but never replace the live GitHub workflows.
-          rsync -a --exclude='.github/' "$TEMP/" ./
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- ':!.github/workflows/main.yml' ':!.github/workflows/release-manual.yml'
-          if ! git diff --cached --quiet; then
-            git commit -m "Migrate Android project from ZIP to direct source files [skip ci]"
-            git push origin HEAD:main
-          else
-            echo "Nu există fișiere noi de migrat."
-          fi
-
       - name: Check application ID
         shell: bash
         run: |
