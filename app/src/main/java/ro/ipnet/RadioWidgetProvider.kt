@@ -1,4 +1,4 @@
-package ro.ipnet.radiobigfmalban
+package ro.ipnet
 
 import ro.ipnet.R
 
@@ -58,10 +58,10 @@ class RadioWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
-        const val ACTION_PLAY_PAUSE = "ro.ipnet.radiobigfmalban.WIDGET_PLAY_PAUSE"
-        const val ACTION_STOP = "ro.ipnet.radiobigfmalban.WIDGET_STOP"
-        const val ACTION_PREVIOUS = "ro.ipnet.radiobigfmalban.WIDGET_PREVIOUS"
-        const val ACTION_NEXT = "ro.ipnet.radiobigfmalban.WIDGET_NEXT"
+        const val ACTION_PLAY_PAUSE = "ro.ipnet.WIDGET_PLAY_PAUSE"
+        const val ACTION_STOP = "ro.ipnet.WIDGET_STOP"
+        const val ACTION_PREVIOUS = "ro.ipnet.WIDGET_PREVIOUS"
+        const val ACTION_NEXT = "ro.ipnet.WIDGET_NEXT"
 
         fun refresh(context: Context) {
             val manager = AppWidgetManager.getInstance(context)

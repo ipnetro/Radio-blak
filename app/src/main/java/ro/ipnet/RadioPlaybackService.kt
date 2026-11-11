@@ -1,4 +1,4 @@
-package ro.ipnet.radiobigfmalban
+package ro.ipnet
 
 import android.app.PendingIntent
 import android.content.Context

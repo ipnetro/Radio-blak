@@ -1,4 +1,4 @@
-package ro.ipnet.radiobigfmalban
+package ro.ipnet
 
 import ro.ipnet.BuildConfig
 import android.content.ComponentName
