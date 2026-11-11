@@ -510,7 +510,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
         checkForUpdate(showUpToDate = true)
     }
 
-    LaunchedEffect(controller, selected, playing, isActivityVisible) {
+    LaunchedEffect(controller, selected, playing, isActivityVisible, stationUnavailable) {
         if (!isActivityVisible) return@LaunchedEffect
         // Poll while the app is visible; keep background playback free of UI metadata polling.
         // Do not wait for ExoPlayer to report isPlaying: the new station's metadata
@@ -527,10 +527,11 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                     }
                 }
                 // Discard late replies from a previous station.
-                if (selected == stationIndex && info != null && info.title.isNotBlank()) {
+                if (selected == stationIndex && !stationUnavailable && info != null && info.title.isNotBlank()) {
                     val display = if (info.artist.isNotBlank()) "${info.artist} — ${info.title}" else info.title
                     nowPlaying = display
                     if (nowPlayingArtworkUrl != info.artworkUrl) {
+                        nowPlayingArtwork = null
                         nowPlayingArtworkUrl = info.artworkUrl
                     }
                     val songKey = "${info.artist}|${info.title}|${info.artworkUrl}"
@@ -567,33 +568,44 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                         fetchAzuraCastNowPlaying(station.apiId, station.name)
                     }
                 }
-                if (selected == stationIndex && info != null && info.title.isNotBlank()) {
+                if (selected == stationIndex && !stationUnavailable && info != null && info.title.isNotBlank()) {
                     nowPlaying = if (info.artist.isNotBlank()) "${info.artist} — ${info.title}" else info.title
-                    nowPlayingArtworkUrl = info.artworkUrl
+                    if (nowPlayingArtworkUrl != info.artworkUrl) {
+                        nowPlayingArtwork = null
+                        nowPlayingArtworkUrl = info.artworkUrl
+                    }
                 }
             }
             delay(5000)
         }
     }
 
-    LaunchedEffect(nowPlayingArtworkUrl) {
-        nowPlayingArtwork = if (nowPlayingArtworkUrl.isBlank()) null else withContext(Dispatchers.IO) {
-            runCatching {
-                val connection = (URL(nowPlayingArtworkUrl).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 7000
-                    readTimeout = 7000
-                    instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/1.1.42")
-                }
-                try {
-                    if (connection.responseCode !in 200..299) return@runCatching null
-                    connection.inputStream.use { stream ->
-                        val bytes = stream.readBytes()
-                        if (bytes.size > 5 * 1024 * 1024) null
-                        else BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+    LaunchedEffect(nowPlayingArtworkUrl, stationUnavailable) {
+        val requestedArtworkUrl = nowPlayingArtworkUrl
+        if (stationUnavailable || requestedArtworkUrl.isBlank()) {
+            nowPlayingArtwork = null
+        } else {
+            val loadedArtwork = withContext(Dispatchers.IO) {
+                runCatching {
+                    val connection = (URL(requestedArtworkUrl).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 7000
+                        readTimeout = 7000
+                        instanceFollowRedirects = true
+                        setRequestProperty("User-Agent", "Radio-Ip-NeT-Android/1.1.42")
                     }
-                } finally { connection.disconnect() }
-            }.getOrNull()
+                    try {
+                        if (connection.responseCode !in 200..299) return@runCatching null
+                        connection.inputStream.use { stream ->
+                            val bytes = stream.readBytes()
+                            if (bytes.size > 5 * 1024 * 1024) null
+                            else BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                        }
+                    } finally { connection.disconnect() }
+                }.getOrNull()
+            }
+            if (!stationUnavailable && nowPlayingArtworkUrl == requestedArtworkUrl) {
+                nowPlayingArtwork = loadedArtwork
+            }
         }
     }
 
