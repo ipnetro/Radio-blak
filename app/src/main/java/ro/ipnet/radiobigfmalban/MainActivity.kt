@@ -230,6 +230,13 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                         playing = false
                     }
                 }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    // A station can be offline without taking down the app or the player screen.
+                    playing = false
+                    status = "Postul radio nu este disponibil momentan. Alege alt post sau încearcă din nou."
+                }
+
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     val nextIndex = stations.indexOfFirst { it.apiId == mediaItem?.mediaId }
                     if (nextIndex >= 0) {
