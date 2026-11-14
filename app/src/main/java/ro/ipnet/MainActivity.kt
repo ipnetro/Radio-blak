@@ -135,6 +135,7 @@ private fun localized(text: String): String {
         if (text.startsWith("Versiunea ") && text.endsWith("linkul APK lipsește sau este invalid")) return text.replace("Versiunea ", "Version ").replace(" există, dar linkul APK lipsește sau este invalid", " is available, but the APK link is missing or invalid")
         if (text.startsWith("Configurație live încărcată: ")) return text.replace("Configurație live încărcată: ", "Live configuration loaded: ").replace(" posturi", " stations")
         if (text.startsWith("Versiune instalată: ")) return text.replace("Versiune instalată: ", "Installed version: ")
+        if (text.startsWith("FEEL THE MUSIC  •  VERSION ")) return "FEEL THE MUSIC  •  VERSION " + text.removePrefix("FEEL THE MUSIC  •  VERSION ")
         if (text.startsWith("Config live: ")) return text.replace("Config live: ", "Live config: ")
         return text
     }
@@ -143,6 +144,7 @@ private fun localized(text: String): String {
     if (text.startsWith("Version ") && text.contains(" — downloading update...")) return text.replace("Version ", "Versiunea ").replace(" — downloading update...", " — se descarcă actualizarea...")
     if (text.startsWith("Version ") && text.endsWith("is available, but the APK link is missing or invalid")) return text.replace("Version ", "Versiunea ").replace(" is available, but the APK link is missing or invalid", " există, dar linkul APK lipsește sau este invalid")
     if (text.startsWith("Installed version: ")) return text.replace("Installed version: ", "Versiune instalată: ")
+    if (text.startsWith("FEEL THE MUSIC  •  VERSION ")) return "SIMTE MUZICA  •  VERSIUNEA " + text.removePrefix("FEEL THE MUSIC  •  VERSION ")
     if (text.startsWith("Live config: ")) return text.replace("Live config: ", "Config live: ")
     if (text.startsWith("Live configuration loaded: ")) return text.replace("Live configuration loaded: ", "Configurație live încărcată: ").replace(" stations", " posturi")
     return text
