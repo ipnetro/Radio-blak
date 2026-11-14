@@ -4,7 +4,7 @@ Aplicația Radio Ip-NeT citește versiunea disponibilă din:
 
 `https://update.ip-net.ro/version.json`
 
-În momentul publicării v1.1.46, endpoint-ul public încă raportează versiunea 1.1.45 și codul 1001045. Utilizatorii care au instalată versiunea 1.1.45 nu vor primi automat oferta pentru v1.1.46 până când fișierul de pe serverul de actualizări nu este actualizat.
+La verificarea din 14 noiembrie 2026, endpoint-ul public raportează versiunea 1.1.46 și codul 1001046, iar linkul APK indică ultimul GitHub Release. Fișierul version.json din repository reflectă această configurație. Serverul de actualizări este administrat separat și trebuie reverificat după fiecare publicare.
 
 Fișierul [version.json](version.json) din acest director conține valorile pentru versiunea publicată curent. Încarcă-l pe serverul care găzduiește `update.ip-net.ro`, înlocuind fișierul `version.json`, apoi verifică URL-ul public și asigură-te că afișează 1.1.46 / 1001046.
 
