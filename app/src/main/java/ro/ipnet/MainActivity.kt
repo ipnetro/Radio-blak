@@ -394,7 +394,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
         stationUnavailable = false
         stationConnecting = true
         status = "Se conectează la ${stations[index].name}..."
-        // Curățăm imediat metadatele vechi.
+        // RO: Curățăm imediat metadatele vechi. / EN: Clear stale metadata immediately.
         nowPlaying = "Se conectează la post…"
         nowPlayingArtworkUrl = ""
         nowPlayingArtwork = null
