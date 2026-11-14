@@ -14,10 +14,10 @@ Radio Ip-NeT is an Android app for listening to Radio Angel and Radio Tequila Cl
 | Name | **Radio Ip-NeT** |
 | Application ID | `ro.ipnet` |
 | Minimum Android | 6.0 (API 23) |
-| Source version on `main` | 1.1.46 |
-| Latest published version | 1.1.46 |
+| Source version on `main` | 1.1.47 |
+| Latest published version | 1.1.47 |
 
-The source version and latest published APK are both **1.1.46**. Download the [official APK](https://github.com/ipnetro/Radio.Red-Black/releases/latest).
+The source version and latest published APK are both **1.1.47**. Download the [official APK](https://github.com/ipnetro/Radio.Red-Black/releases/latest).
 
 ### Radio stations
 
@@ -55,7 +55,7 @@ The app downloads its station configuration from the Radio Ip-NeT service, so th
 
 ### Automatic updates
 
-The app reads the available version from `update.ip-net.ro/version.json`. The server file must be updated after a release; the values required for Release **1.1.46** are in the [updater instructions](update-server/README.md). Until the server is updated, users on version 1.1.45 can manually download the new APK from Releases.
+The app reads the available version from `update.ip-net.ro/version.json`. The server file must be updated after a release; the values required for Release **1.1.47** are in the [updater instructions](update-server/README.md). Until the server is updated, users on version 1.1.45 can manually download the new APK from Releases.
 
 ### Installation
 
@@ -104,10 +104,10 @@ Radio Ip-NeT este o aplicație Android pentru ascultarea posturilor Radio Angel 
 | Nume | **Radio Ip-NeT** |
 | Application ID | `ro.ipnet` |
 | Android minim | 6.0 (API 23) |
-| Versiunea sursei de pe `main` | 1.1.46 |
-| Ultima versiune publicată | 1.1.46 |
+| Versiunea sursei de pe `main` | 1.1.47 |
+| Ultima versiune publicată | 1.1.47 |
 
-Versiunea sursei și ultimul APK publicat sunt ambele **1.1.46**. Descarcă [APK-ul oficial](https://github.com/ipnetro/Radio.Red-Black/releases/latest).
+Versiunea sursei și ultimul APK publicat sunt ambele **1.1.47**. Descarcă [APK-ul oficial](https://github.com/ipnetro/Radio.Red-Black/releases/latest).
 
 ### Posturi radio
 
@@ -145,7 +145,7 @@ Aplicația descarcă și configurația posturilor de la serviciul Radio Ip-NeT, 
 
 ### Actualizări automate
 
-Aplicația citește versiunea disponibilă de la `update.ip-net.ro/version.json`. Fișierul de pe server trebuie actualizat după publicarea unei versiuni; valorile necesare pentru Release-ul **1.1.46** sunt în [instrucțiunile updaterului](update-server/README.md). Până la actualizarea serverului, utilizatorii versiunii 1.1.45 pot descărca manual APK-ul nou din Releases.
+Aplicația citește versiunea disponibilă de la `update.ip-net.ro/version.json`. Fișierul de pe server trebuie actualizat după publicarea unei versiuni; valorile necesare pentru Release-ul **1.1.47** sunt în [instrucțiunile updaterului](update-server/README.md). Până la actualizarea serverului, utilizatorii versiunii 1.1.45 pot descărca manual APK-ul nou din Releases.
 
 ### Instalare
 
