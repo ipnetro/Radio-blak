@@ -85,6 +85,8 @@ private val roToEnglish = mapOf(
     "Șterge istoricul" to "Clear history",
     "Închide" to "Close",
     "Alege o melodie din lista disponibilă pentru Radio Angel Hip-Hop." to "Choose a song from the available list for Radio Angel Hip-Hop.",
+    "Caută piesă sau artist" to "Search by song or artist",
+    "Niciun rezultat. Încearcă alt nume de piesă sau artist." to "No matches. Try another song or artist.",
     "Nu sunt melodii disponibile pentru cereri momentan." to "No songs are currently available for requests.",
     "CERE" to "REQUEST",
     "Reîncarcă" to "Refresh",
@@ -319,6 +321,13 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
     var showSongRequests by remember { mutableStateOf(false) }
     var showHipHopHistory by remember { mutableStateOf(false) }
     var songRequests by remember { mutableStateOf<List<SongRequest>>(emptyList()) }
+    var songSearchQuery by remember { mutableStateOf("") }
+    val filteredSongRequests = remember(songRequests, songSearchQuery) {
+        val query = songSearchQuery.trim()
+        if (query.isEmpty()) songRequests else songRequests.filter { song ->
+            song.title.contains(query, ignoreCase = true) || song.artist.contains(query, ignoreCase = true)
+        }
+    }
     var hipHopHistory by remember { mutableStateOf<List<String>>(emptyList()) }
     var songRequestsLoading by remember { mutableStateOf(false) }
     var hipHopHistoryLoading by remember { mutableStateOf(false) }
@@ -499,12 +508,24 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                     Text("Alege o melodie din lista disponibilă pentru Radio Angel Hip-Hop.",
                         color = Color(0xFFB9AAB1), fontSize = 12.sp)
                     Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = songSearchQuery,
+                        onValueChange = { songSearchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Caută piesă sau artist") }
+                    )
+                    Spacer(Modifier.height(10.dp))
                     if (songRequestsLoading) CircularProgressIndicator(color = Red)
+                    if (!songRequestsLoading && songRequests.isNotEmpty() && filteredSongRequests.isEmpty()) {
+                        Text("Niciun rezultat. Încearcă alt nume de piesă sau artist.",
+                            color = Color(0xFFB9AAB1), fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp))
+                    }
                     if (!songRequestsLoading && songRequests.isEmpty()) Text(
                         songRequestMessage.ifBlank { "Nu sunt melodii disponibile pentru cereri momentan." },
                         color = Color(0xFFE8DDE1), fontSize = 12.sp
                     )
-                    songRequests.forEach { song ->
+                    filteredSongRequests.forEach { song ->
                         Surface(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                             color = Color(0xFF211A22), shape = RoundedCornerShape(12.dp)
