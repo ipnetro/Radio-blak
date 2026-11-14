@@ -81,10 +81,11 @@ Consultă [nota de confidențialitate](PRIVACY.md) și [instrucțiunile de secur
 Aplicația și codul sursă sunt proprietare. Citește [LICENSE](LICENSE). Bibliotecile și componentele terțe rămân sub licențele lor proprii.
 
 
-## Feedback și idei
+## Feedback și idei / Feedback and ideas
 
 Ai o sugestie sau ai găsit o problemă? Deschide un [issue nou](https://github.com/ipnetro/Radio.Red-Black/issues/new) și alege formularul potrivit. Citește [ghidul de feedback și contribuții](.github/CONTRIBUTING.md). Te rugăm să nu publici parole, chei API sau date private.
 
+Have an idea or found a problem? Open a [new issue](https://github.com/ipnetro/Radio.Red-Black/issues/new) and choose the appropriate form. Read the [feedback and contribution guide](.github/CONTRIBUTING.md). Please do not post passwords, API keys, or private information.
 ---
 
 **Radio Ip-NeT**  
