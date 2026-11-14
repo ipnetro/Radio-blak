@@ -1,21 +1,7 @@
-# Security Policy
+# Raportarea problemelor de securitate
 
-## Supported Versions
+Pentru actualizări, folosește [GitHub Releases](https://github.com/ipnetro/Radio.Red-Black/releases).
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Pentru a raporta o vulnerabilitate, folosește funcția **Report a vulnerability** din fila **Security** a repository-ului, dacă este disponibilă. Dacă nu este disponibilă, contactează administratorul prin [profilul GitHub IP-NET](https://github.com/ipnetro).
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
-
-## Reporting a Vulnerability
-
-Use this section to tell people how to report a vulnerability.
-
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Nu publica date personale, parole sau detalii exploatabile într-un issue public. Include versiunea aplicației și pașii de reproducere într-un mesaj privat.
