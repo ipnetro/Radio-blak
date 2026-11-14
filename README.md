@@ -51,6 +51,7 @@ The app downloads its station configuration from the Radio Ip-NeT service, so th
 - Check the configuration and new versions through `update.ip-net.ro`.
 - Download the APK provided by the update service; Android asks you to confirm the installation.
 - Android equalizer, if supported by your phone.
+- Choose Romanian or English for the app interface; your choice is saved on the phone.
 
 ### Automatic updates
 
@@ -140,6 +141,7 @@ Aplicația descarcă și configurația posturilor de la serviciul Radio Ip-NeT, 
 - Verificarea configurației și versiunilor noi prin `update.ip-net.ro`.
 - Descărcarea APK-ului indicat de serviciul de actualizare; Android cere confirmarea instalării.
 - Egalizator Android, dacă telefonul îl suportă.
+- Alege limba interfeței, română sau engleză; alegerea se salvează pe telefon.
 
 ### Actualizări automate
 
