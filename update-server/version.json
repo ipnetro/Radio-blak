@@ -1,8 +1,8 @@
 {
   "app": "Radio Ip-NeT",
-  "latestVersion": "1.1.46",
-  "versionCode": 1001046,
+  "latestVersion": "1.1.47",
+  "versionCode": 1001047,
   "mandatory": false,
   "apkUrl": "https://github.com/ipnetro/Radio.Red-Black/releases/latest/download/Radio-Ip-NeT.apk",
-  "message": "Radio Ip-NeT 1.1.46"
+  "message": "Radio Ip-NeT 1.1.47"
 }
