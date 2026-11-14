@@ -54,6 +54,10 @@ Aplicația descarcă și configurația posturilor de la serviciul Radio Ip-NeT, 
 - Descărcarea APK-ului indicat de serviciul de actualizare; Android cere confirmarea instalării.
 - Egalizator Android, dacă telefonul îl suportă.
 
+## Actualizări automate
+
+Aplicația citește versiunea disponibilă de la `update.ip-net.ro/version.json`. Fișierul de pe server trebuie actualizat după publicarea unei versiuni; valorile necesare pentru Release-ul **1.1.46** sunt în [instrucțiunile updaterului](update-server/README.md). Până la actualizarea serverului, utilizatorii versiunii 1.1.45 pot descărca manual APK-ul nou din Releases.
+
 ## Instalare
 
 Descarcă APK-ul oficial din [GitHub Releases](https://github.com/ipnetro/Radio.Red-Black/releases/latest). Pentru a instala o versiune peste cea existentă, păstrează același Application ID și aceeași cheie de semnare.
