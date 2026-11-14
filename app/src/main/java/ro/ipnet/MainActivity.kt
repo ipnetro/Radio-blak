@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +64,104 @@ private val defaultStations = listOf(
 private val Bg = Color(0xFF08090C)
 private val Panel = Color(0xFF171820)
 private val Red = Color(0xFFFF1744)
+
+
+private val appEnglish = mutableStateOf(false)
+private val roToEnglish = mapOf(
+    "Pregătit pentru redare" to "Ready to play",
+    "Așteptăm informațiile melodiei…" to "Waiting for song information…",
+    "Verifică actualizări" to "Check for updates",
+    "Radio redă în fundal" to "Radio is playing in the background",
+    "Post indisponibil" to "Station unavailable",
+    "Postul radio nu este disponibil momentan. Alege alt post sau încearcă din nou." to "The station is currently unavailable. Choose another station or try again.",
+    "Playerul se conectează..." to "Connecting to player...",
+    "Se conectează la post…" to "Connecting to station…",
+    "Se verifică actualizările..." to "Checking for updates...",
+    "Nu s-a găsit o versiune publicată" to "No published version was found",
+    "Aplicația este la zi — nu trebuie actualizată" to "The app is up to date — no update is needed",
+    "Nu s-a putut verifica. Încearcă din nou." to "Could not check for updates. Try again.",
+    "Istoric ascultare" to "Listening history",
+    "Nu există încă posturi în istoric." to "There are no stations in history yet.",
+    "Șterge istoricul" to "Clear history",
+    "Închide" to "Close",
+    "Alege o melodie din lista disponibilă pentru Radio Angel Hip-Hop." to "Choose a song from the available list for Radio Angel Hip-Hop.",
+    "Nu sunt melodii disponibile pentru cereri momentan." to "No songs are currently available for requests.",
+    "CERE" to "REQUEST",
+    "Reîncarcă" to "Refresh",
+    "Istoricul nu este disponibil momentan." to "History is currently unavailable.",
+    "Versiune instalată: \$installedVersion" to "Installed version: \$installedVersion",
+    "lista stations lipsește" to "stations list is missing",
+    "lista de posturi este goală" to "station list is empty",
+    "Nu există elemente sau API-ul nu oferă acces la această secțiune." to "There are no items, or the API does not provide access to this section.",
+    "Elimină de la favorite" to "Remove from favorites",
+    "Adaugă la favorite" to "Add to favorites",
+    "Versiune" to "Version",
+    "Descarcă APK" to "Download APK",
+    "Coperta melodiei curente" to "Current song cover",
+    "Redare oprită" to "Playback stopped",
+    "Pauză" to "Paused",
+    "Se pregătește playerul..." to "Preparing the player...",
+    "Alege atmosfera preferată" to "Choose your vibe",
+    "Lista indisponibilă sau cererile sunt dezactivate." to "The list is unavailable or requests are disabled.",
+    "Cererea a fost trimisă către Radio Angel Hip-Hop!" to "Your request was sent to Radio Angel Hip-Hop!",
+    "Nu am putut trimite cererea. Încearcă din nou." to "Could not send your request. Try again.",
+    "Se descarcă actualizarea aplicației" to "Downloading the app update",
+    "ACUM SE REDĂ" to "NOW PLAYING",
+    "STARE POST" to "STATION STATUS",
+    "MELODIA CURENTĂ" to "CURRENT SONG",
+    "POSTURI RADIO" to "RADIO STATIONS",
+    "POSTURI" to "STATIONS",
+    "SONG REQUEST" to "SONG REQUEST",
+    "SONG HISTORY" to "SONG HISTORY",
+    "FAVORITELE TALE" to "YOUR FAVORITES",
+    "Alege atmosfera preferată" to "Choose your vibe",
+    "Song Request • Hip-Hop" to "Song Request • Hip-Hop",
+    "Song History • Hip-Hop" to "Song History • Hip-Hop",
+    "Versiunea \$latest — se descarcă actualizarea..." to "Version \$latest — downloading update...",
+    "Versiunea \$latest există, dar linkul APK lipsește sau este invalid" to "Version \$latest is available, but the APK link is missing or invalid",
+    "Versiune instalată: \$installedVersion" to "Installed version: \$installedVersion",
+    "Config live: \${error.message ?: \"eroare de conexiune\"}" to "Live config: \${error.message ?: \"connection error\"}",
+    "eroare de conexiune" to "connection error",
+    "Configurație live încărcată: \${remoteStations.size} posturi" to "Live configuration loaded: \${remoteStations.size} stations"
+)
+private val englishToRo = roToEnglish.entries.associate { it.value to it.key }
+private fun localized(text: String): String {
+    if (appEnglish.value) {
+        roToEnglish[text]?.let { return it }
+        if (text.startsWith("Se conectează la ") && text.endsWith("...")) return "Connecting to " + text.removePrefix("Se conectează la ").removeSuffix("...") + "..."
+        return text
+    }
+    englishToRo[text]?.let { return it }
+    if (text.startsWith("Connecting to ") && text.endsWith("...")) return "Se conectează la " + text.removePrefix("Connecting to ").removeSuffix("...") + "..."
+    return text
+}
+
+@Composable
+private fun Text(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    fontSize: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    fontStyle: androidx.compose.ui.text.font.FontStyle? = null,
+    fontWeight: FontWeight? = null,
+    fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
+    letterSpacing: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    textDecoration: androidx.compose.ui.text.style.TextDecoration? = null,
+    textAlign: androidx.compose.ui.text.style.TextAlign? = null,
+    lineHeight: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    overflow: androidx.compose.ui.text.style.TextOverflow = androidx.compose.ui.text.style.TextOverflow.Clip,
+    softWrap: Boolean = true,
+    maxLines: Int = Int.MAX_VALUE,
+    minLines: Int = 1,
+    onTextLayout: (androidx.compose.ui.text.TextLayoutResult) -> Unit = {},
+    style: androidx.compose.ui.text.TextStyle = androidx.compose.material3.LocalTextStyle.current
+) {
+    MaterialText(text = localized(text), modifier = modifier, color = color, fontSize = fontSize,
+        fontStyle = fontStyle, fontWeight = fontWeight, fontFamily = fontFamily,
+        letterSpacing = letterSpacing, textDecoration = textDecoration, textAlign = textAlign,
+        lineHeight = lineHeight, overflow = overflow, softWrap = softWrap,
+        maxLines = maxLines, minLines = minLines, onTextLayout = onTextLayout, style = style)
+}
 
 class MainActivity : ComponentActivity() {
     private var controller by mutableStateOf<MediaController?>(null)
@@ -183,6 +282,8 @@ class MainActivity : ComponentActivity() {
 private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean) {
     val appContext = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { appContext.getSharedPreferences("radio_ipnet_features", Context.MODE_PRIVATE) }
+    var englishUi by remember { mutableStateOf(prefs.getBoolean("english_ui", java.util.Locale.getDefault().language.equals("en", true))) }
+    SideEffect { appEnglish.value = englishUi }
     var selected by remember { mutableIntStateOf(prefs.getInt("last_station_index", 1).coerceIn(0, defaultStations.lastIndex)) }
     var playing by remember { mutableStateOf(false) }
     var stationUnavailable by remember { mutableStateOf(false) }
@@ -661,6 +762,7 @@ private fun RadioScreen(controller: MediaController?, isActivityVisible: Boolean
                                 prefs.edit().putStringSet("favorites", favoriteNames).apply()
                             }
                         )
+                        DropdownMenuItem(text = { Text(if (englishUi) "🇬🇧 English" else "🇷🇴 Română") }, onClick = { englishUi = !englishUi; appEnglish.value = englishUi; prefs.edit().putBoolean("english_ui", englishUi).apply() })
                         DropdownMenuItem(text = { Text("Istoric ascultare") }, onClick = { menuExpanded = false; showHistoryDialog = true })
                         DropdownMenuItem(text = { Text("Versiune") }, onClick = { menuExpanded = false; showVersionDialog = true })
                         DropdownMenuItem(text = { Text(updateMenuLabel) }, onClick = {
