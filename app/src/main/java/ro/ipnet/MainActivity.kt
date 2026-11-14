@@ -111,12 +111,12 @@ private val roToEnglish = mapOf(
     "MELODIA CURENTĂ" to "CURRENT SONG",
     "POSTURI RADIO" to "RADIO STATIONS",
     "POSTURI" to "STATIONS",
-    "SONG REQUEST" to "SONG REQUEST",
-    "SONG HISTORY" to "SONG HISTORY",
+    "Cerere melodie" to "SONG REQUEST",
+    "Istoric melodii" to "SONG HISTORY",
     "FAVORITELE TALE" to "YOUR FAVORITES",
     "Alege atmosfera preferată" to "Choose your vibe",
-    "Song Request • Hip-Hop" to "Song Request • Hip-Hop",
-    "Song History • Hip-Hop" to "Song History • Hip-Hop",
+    "Cerere melodie • Hip-Hop" to "Song Request • Hip-Hop",
+    "Istoric melodii • Hip-Hop" to "Song History • Hip-Hop",
     "Versiunea \$latest — se descarcă actualizarea..." to "Version \$latest — downloading update...",
     "Versiunea \$latest există, dar linkul APK lipsește sau este invalid" to "Version \$latest is available, but the APK link is missing or invalid",
     "Versiune instalată: \$installedVersion" to "Installed version: \$installedVersion",
@@ -129,10 +129,20 @@ private fun localized(text: String): String {
     if (appEnglish.value) {
         roToEnglish[text]?.let { return it }
         if (text.startsWith("Se conectează la ") && text.endsWith("...")) return "Connecting to " + text.removePrefix("Se conectează la ").removeSuffix("...") + "..."
+        if (text.startsWith("Versiunea ") && text.contains(" — se descarcă actualizarea...")) return text.replace("Versiunea ", "Version ").replace(" — se descarcă actualizarea...", " — downloading update...")
+        if (text.startsWith("Versiunea ") && text.endsWith("linkul APK lipsește sau este invalid")) return text.replace("Versiunea ", "Version ").replace(" există, dar linkul APK lipsește sau este invalid", " is available, but the APK link is missing or invalid")
+        if (text.startsWith("Configurație live încărcată: ")) return text.replace("Configurație live încărcată: ", "Live configuration loaded: ").replace(" posturi", " stations")
+        if (text.startsWith("Versiune instalată: ")) return text.replace("Versiune instalată: ", "Installed version: ")
+        if (text.startsWith("Config live: ")) return text.replace("Config live: ", "Live config: ")
         return text
     }
     englishToRo[text]?.let { return it }
     if (text.startsWith("Connecting to ") && text.endsWith("...")) return "Se conectează la " + text.removePrefix("Connecting to ").removeSuffix("...") + "..."
+    if (text.startsWith("Version ") && text.contains(" — downloading update...")) return text.replace("Version ", "Versiunea ").replace(" — downloading update...", " — se descarcă actualizarea...")
+    if (text.startsWith("Version ") && text.endsWith("is available, but the APK link is missing or invalid")) return text.replace("Version ", "Versiunea ").replace(" is available, but the APK link is missing or invalid", " există, dar linkul APK lipsește sau este invalid")
+    if (text.startsWith("Installed version: ")) return text.replace("Installed version: ", "Versiune instalată: ")
+    if (text.startsWith("Live config: ")) return text.replace("Live config: ", "Config live: ")
+    if (text.startsWith("Live configuration loaded: ")) return text.replace("Live configuration loaded: ", "Configurație live încărcată: ").replace(" stations", " posturi")
     return text
 }
 
