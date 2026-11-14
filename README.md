@@ -10,27 +10,31 @@ Radio Ip-NeT este o aplicație Android pentru ascultarea posturilor Radio Angel 
 |---|---|
 | Nume | **Radio Ip-NeT** |
 | Application ID | `ro.ipnet` |
-| Platformă | Android |
 | Android minim | 6.0 (API 23) |
-| Versiunea sursei | 1.1.46 |
+| Versiunea sursei de pe `main` | 1.1.46 |
+| Ultima versiune publicată | 1.0.1 |
+
+Sursa de pe `main` este mai nouă decât APK-ul din ultimul GitHub Release. Versiunea 1.1.46 nu este încă publicată ca Release. Descarcă [APK-ul publicat](https://github.com/ipnetro/Radio.Red-Black/releases/latest) sau așteaptă publicarea unui nou Release semnat.
 
 ## Posturi radio
+
+Configurația implicită conține:
 
 - Radio Angel Hip-Hop
 - Radio Angel Dance
 - Radio Angel Pop
 - Radio Tequila Club
 
-Disponibilitatea fluxurilor radio și a informațiilor despre melodii depinde de serviciile fiecărui post și de conexiunea la internet.
+Aplicația descarcă și configurația posturilor de la serviciul Radio Ip-NeT, deci lista se poate schimba fără o versiune nouă a aplicației. Redarea și informațiile despre melodii depind de conexiunea la internet și de serviciile posturilor.
 
 ## Funcționalități
 
 ### Ascultare și player
 
 - Redare audio live și continuarea redării în fundal.
-- Comenzi de redare din aplicație, notificare și ecranul blocat.
+- Comenzi din aplicație, notificare, ecranul blocat și widget.
 - Reglarea volumului și oprirea sunetului.
-- Afișarea melodiei și a imaginii albumului atunci când postul furnizează aceste informații.
+- Afișarea melodiei și a imaginii albumului când postul le furnizează.
 
 ### Posturile tale
 
@@ -38,38 +42,39 @@ Disponibilitatea fluxurilor radio și a informațiilor despre melodii depinde de
 - Istoric local cu ultimele 20 de posturi ascultate.
 - Revenire rapidă la postul selectat anterior.
 
-### Funcții Radio Angel Hip-Hop
+### Radio Angel Hip-Hop
 
 - Trimiterea unei cereri de melodie, dacă funcția este disponibilă.
 - Consultarea istoricului melodiilor difuzate, dacă serviciul îl furnizează.
 
 ### Personalizare și actualizări
 
-- Alegerea culorii de accent: roșu, albastru, verde, mov sau portocaliu.
-- Verificarea actualizărilor și descărcarea versiunilor publicate, cu confirmarea standard de instalare Android.
-- Egalizatorul Android este disponibil dacă telefonul îl suportă.
+- Culori de accent: roșu, albastru, verde, mov și portocaliu.
+- Verificarea configurației și versiunilor noi prin `update.ip-net.ro`.
+- Descărcarea APK-ului indicat de serviciul de actualizare; Android cere confirmarea instalării.
+- Egalizator Android, dacă telefonul îl suportă.
 
 ## Instalare
 
-Descarcă APK-ul oficial din [GitHub Releases](https://github.com/ipnetro/Radio.Red-Black/releases). Android poate cere să confirmi instalarea unei aplicații descărcate din afara magazinului.
+Descarcă APK-ul oficial din [GitHub Releases](https://github.com/ipnetro/Radio.Red-Black/releases/latest). Pentru a instala o versiune peste cea existentă, păstrează același Application ID și aceeași cheie de semnare.
 
-Pentru actualizări peste o versiune instalată, APK-ul trebuie semnat cu aceeași cheie și să păstreze același Application ID.
-
-## Compilarea proiectului
+## Compilare și publicare
 
 Proiectul folosește Kotlin, Jetpack Compose și AndroidX Media3. Pentru compilare sunt necesare JDK 17 și Android SDK 35.
 
-Comanda de compilare a variantei Debug:
+Compilează local varianta Debug:
 
 ```bash
 gradle assembleDebug
 ```
 
-Versiunile publicate sunt generate prin workflow-ul GitHub Actions. Cheile de semnare trebuie păstrate private și configurate ca secrete în GitHub Actions.
+GitHub Actions compilează versiunea Debug pe ramura `main`. Un Release semnat se publică printr-un tag de forma `vMAJOR.MINOR.PATCH`. Cheia de semnare este păstrată în secretele GitHub Actions; nu încărca fișierul keystore sau parolele în repository.
+
+Consultă [nota de confidențialitate](PRIVACY.md) și [instrucțiunile de securitate](SECURITY.md).
 
 ## Licență
 
-Aplicația și codul sursă sunt proprietare. Consultă fișierul [LICENSE](LICENSE). Bibliotecile și componentele terțe rămân sub licențele lor proprii.
+Aplicația și codul sursă sunt proprietare. Citește [LICENSE](LICENSE). Bibliotecile și componentele terțe rămân sub licențele lor proprii.
 
 ---
 
