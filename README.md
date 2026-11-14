@@ -1,5 +1,95 @@
 # Radio Ip-NeT
 
+## 🇬🇧
+
+
+**Your favorite music live on Android.**
+
+Radio Ip-NeT is an Android app for listening to Radio Angel and Radio Tequila Club. Choose a station, start playback, and keep listening in the background, including with media controls in the notification or on the lock screen.
+
+### About the app
+
+| Field | Value |
+|---|---|
+| Name | **Radio Ip-NeT** |
+| Application ID | `ro.ipnet` |
+| Minimum Android | 6.0 (API 23) |
+| Source version on `main` | 1.1.46 |
+| Latest published version | 1.1.46 |
+
+The source version and latest published APK are both **1.1.46**. Download the [official APK](https://github.com/ipnetro/Radio.Red-Black/releases/latest).
+
+### Radio stations
+
+The default configuration includes:
+- Radio Angel Hip-Hop
+- Radio Angel Dance
+- Radio Angel Pop
+- Radio Tequila Club
+
+The app downloads its station configuration from the Radio Ip-NeT service, so the station list can change without a new app version. Playback and song information depend on your internet connection and the stations' services.
+
+### Features
+
+**Listening and player**
+- Listen to live audio and continue playback in the background.
+- Control playback from the app, notification, lock screen, and widget.
+- Adjust the volume and mute the sound.
+- View the song and album artwork when provided by the station.
+
+**Your stations**
+- Save favorite stations.
+- Keep a local history of the last 20 stations played.
+- Quickly return to the previously selected station.
+
+**Radio Angel Hip-Hop**
+- Send a song request when this feature is available.
+- View the broadcast song history when provided by the service.
+
+**Customization and updates**
+- Accent colors: red, blue, green, purple, and orange.
+- Check the configuration and new versions through `update.ip-net.ro`.
+- Download the APK provided by the update service; Android asks you to confirm the installation.
+- Android equalizer, if supported by your phone.
+
+### Automatic updates
+
+The app reads the available version from `update.ip-net.ro/version.json`. The server file must be updated after a release; the values required for Release **1.1.46** are in the [updater instructions](update-server/README.md). Until the server is updated, users on version 1.1.45 can manually download the new APK from Releases.
+
+### Installation
+
+Download the official APK from [GitHub Releases](https://github.com/ipnetro/Radio.Red-Black/releases/latest). To install an update over the existing app, keep the same Application ID and signing key.
+
+### Build and release
+
+The project uses Kotlin, Jetpack Compose, and AndroidX Media3. Building requires JDK 17 and Android SDK 35.
+
+Build the Debug version locally:
+
+```bash
+gradle assembleDebug
+```
+
+GitHub Actions builds the Debug version on the `main` branch. A signed Release is published using a tag in the form `vMAJOR.MINOR.PATCH`. The signing key is stored in GitHub Actions secrets; do not upload the keystore file or passwords to the repository.
+
+Read the [privacy notice](PRIVACY.md) and [security instructions](SECURITY.md).
+
+### License
+
+The app and source code are proprietary. Read [LICENSE](LICENSE). Third-party libraries and components remain under their respective licenses.
+
+### Feedback and ideas
+
+Have an idea or found a problem? Open a [new issue](https://github.com/ipnetro/Radio.Red-Black/issues/new) and choose the appropriate form. Read the [feedback and contribution guide](.github/CONTRIBUTING.md). Please do not post passwords, API keys, or private information.
+
+---
+
+**Radio Ip-NeT**  
+**FEEL THE MUSIC**
+
+
+---
+
 ## 🇷🇴
 
 **Muzica preferată, live, direct pe Android.**
@@ -80,94 +170,6 @@ Aplicația și codul sursă sunt proprietare. Citește [LICENSE](LICENSE). Bibli
 ### Feedback și idei
 
 Ai o sugestie sau ai găsit o problemă? Deschide un [issue nou](https://github.com/ipnetro/Radio.Red-Black/issues/new) și alege formularul potrivit. Citește [ghidul de feedback și contribuții](.github/CONTRIBUTING.md). Te rugăm să nu publici parole, chei API sau date private.
-
----
-
-**Radio Ip-NeT**  
-**FEEL THE MUSIC**
-
----
-
-## 🇬🇧
-
-**Your favorite music live on Android.**
-
-Radio Ip-NeT is an Android app for listening to Radio Angel and Radio Tequila Club. Choose a station, start playback, and keep listening in the background, including with media controls in the notification or on the lock screen.
-
-### About the app
-
-| Field | Value |
-|---|---|
-| Name | **Radio Ip-NeT** |
-| Application ID | `ro.ipnet` |
-| Minimum Android | 6.0 (API 23) |
-| Source version on `main` | 1.1.46 |
-| Latest published version | 1.1.46 |
-
-The source version and latest published APK are both **1.1.46**. Download the [official APK](https://github.com/ipnetro/Radio.Red-Black/releases/latest).
-
-### Radio stations
-
-The default configuration includes:
-- Radio Angel Hip-Hop
-- Radio Angel Dance
-- Radio Angel Pop
-- Radio Tequila Club
-
-The app downloads its station configuration from the Radio Ip-NeT service, so the station list can change without a new app version. Playback and song information depend on your internet connection and the stations' services.
-
-### Features
-
-**Listening and player**
-- Listen to live audio and continue playback in the background.
-- Control playback from the app, notification, lock screen, and widget.
-- Adjust the volume and mute the sound.
-- View the song and album artwork when provided by the station.
-
-**Your stations**
-- Save favorite stations.
-- Keep a local history of the last 20 stations played.
-- Quickly return to the previously selected station.
-
-**Radio Angel Hip-Hop**
-- Send a song request when this feature is available.
-- View the broadcast song history when provided by the service.
-
-**Customization and updates**
-- Accent colors: red, blue, green, purple, and orange.
-- Check the configuration and new versions through `update.ip-net.ro`.
-- Download the APK provided by the update service; Android asks you to confirm the installation.
-- Android equalizer, if supported by your phone.
-
-### Automatic updates
-
-The app reads the available version from `update.ip-net.ro/version.json`. The server file must be updated after a release; the values required for Release **1.1.46** are in the [updater instructions](update-server/README.md). Until the server is updated, users on version 1.1.45 can manually download the new APK from Releases.
-
-### Installation
-
-Download the official APK from [GitHub Releases](https://github.com/ipnetro/Radio.Red-Black/releases/latest). To install an update over the existing app, keep the same Application ID and signing key.
-
-### Build and release
-
-The project uses Kotlin, Jetpack Compose, and AndroidX Media3. Building requires JDK 17 and Android SDK 35.
-
-Build the Debug version locally:
-
-```bash
-gradle assembleDebug
-```
-
-GitHub Actions builds the Debug version on the `main` branch. A signed Release is published using a tag in the form `vMAJOR.MINOR.PATCH`. The signing key is stored in GitHub Actions secrets; do not upload the keystore file or passwords to the repository.
-
-Read the [privacy notice](PRIVACY.md) and [security instructions](SECURITY.md).
-
-### License
-
-The app and source code are proprietary. Read [LICENSE](LICENSE). Third-party libraries and components remain under their respective licenses.
-
-### Feedback and ideas
-
-Have an idea or found a problem? Open a [new issue](https://github.com/ipnetro/Radio.Red-Black/issues/new) and choose the appropriate form. Read the [feedback and contribution guide](.github/CONTRIBUTING.md). Please do not post passwords, API keys, or private information.
 
 ---
 
