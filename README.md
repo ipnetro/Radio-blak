@@ -12,7 +12,7 @@ Radio Ip-NeT este o aplicație Android pentru ascultarea posturilor Radio Angel 
 | Application ID | `ro.ipnet` |
 | Android minim | 6.0 (API 23) |
 | Versiunea sursei de pe `main` | 1.1.46 |
-| Ultima versiune publicată | 1.0.1 |
+| Ultima versiune publicată | 1.1.46 |
 
 Sursa de pe `main` este mai nouă decât APK-ul din ultimul GitHub Release. Versiunea 1.1.46 nu este încă publicată ca Release. Descarcă [APK-ul publicat](https://github.com/ipnetro/Radio.Red-Black/releases/latest) sau așteaptă publicarea unui nou Release semnat.
 
